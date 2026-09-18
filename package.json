@@ -1,0 +1,35 @@
+{
+  "name": "slsea-solar-generation-api",
+  "version": "1.0.0",
+  "description": "Sri Lanka Sustainable Energy Authority (SLSEA) Real-Time Solar Generation Tracking REST API",
+  "main": "src/app.js",
+  "scripts": {
+    "start": "node src/app.js",
+    "dev": "nodemon src/app.js",
+    "seed": "node src/seeders/seed.js",
+    "migrate": "sequelize-cli db:migrate",
+    "migrate:undo": "sequelize-cli db:migrate:undo"
+  },
+  "keywords": [
+    "slsea",
+    "solar",
+    "iot",
+    "time-series",
+    "express",
+    "postgresql",
+    "sequelize"
+  ],
+  "author": "SLSEA Backend Team",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "pg": "^8.11.5",
+    "pg-hstore": "^2.3.4",
+    "sequelize": "^6.37.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0",
+    "sequelize-cli": "^6.6.2"
+  }
+}
