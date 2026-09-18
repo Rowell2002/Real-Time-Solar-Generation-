@@ -12,7 +12,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Express.js route controllers for the 5-entity hierarchy (`/provinces`, `/districts`, `/substations`, `/installations`, `/readings`).
 - High-throughput ingestion endpoint for real-time meter telemetry (`POST /api/v1/telemetry`).
 - JWT authentication middleware and role-based jurisdiction guards (`national`, `provincial`, `district`).
-- Database seeders for Sri Lanka's 9 provinces and 25 districts.
+
+---
+
+## [0.2.0] - 2026-09-18
+
+### Database Seeding Engine (Phase 1 Scale)
+
+#### Added
+- **Production Seeder Script (`src/seeders/seed.js`)**:
+  - Full Sri Lankan administrative topology: 9 Provinces, 25 Districts strictly mapped.
+  - 28 real CEB/LECO Grid Substations distributed across all 25 districts (exceeds requirement of 20).
+  - 200 Solar Installations distributed across grid substations with unique `meter_id`s (`SLSEA-MTR-0001` through `0200`).
+  - Generated 1 full week of 15-minute interval telemetry per installation (96 readings/day × 7 days = 672 readings per site; **134,400 total time-series records**).
+  - Implemented Sri Lankan equatorial diurnal solar curve: strict 0 kW cutoff between 18:30 and 05:30, realistic morning ramp, solar noon peak (78%-85% rated capacity) between 11:30 and 13:30, and realistic cloud variance.
+  - Monotonic cumulative energy accumulation (`energy_kwh += power_kw * 0.25h`) and AC grid voltage modeling (228V base + solar backfeed rise).
+  - High-performance chunked bulk insertion (`BATCH_SIZE = 8000`) ensuring sub-minute execution without memory exhaustion.
+  - Seeded default jurisdictional administrative accounts for national, provincial, and district tiers.
+- **Project Configuration**:
+  - Added `package.json` with npm run scripts (`"seed"`, `"migrate"`, `"dev"`).
 
 ---
 
