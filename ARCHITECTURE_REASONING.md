@@ -142,3 +142,28 @@ As the number of grid-connected solar installations grows across Sri Lanka, `gen
   - **Single Round-Trip Multi-Row Inserts**: Reduces database round-trips from 134,400 to ~17 batch transactions.
   - **Execution Time**: The complete 134,400-record dataset is seeded in **under 20 seconds**, maintaining ACID consistency across all foreign key relationships.
 
+---
+
+### ADR-09: REST Route Topology & Derived vs. Raw Resource Semantics
+
+* **Requirement**: 
+  - Hierarchy navigation: `/provinces`, `/provinces/{id}/districts`, `/districts/{id}/substations`, `/substations/{id}/installations`.
+  - Composite resource: `/installations/{id}/composite` returning installation metadata + parent details + summary stats.
+  - Operational read: `/installations/{id}/last-reading` as a derived resource.
+  - Device ingestion: `POST /installations/{id}/readings` returning `201 Created` with a `Location` header.
+* **Architectural Decisions**:
+  1. **Scoped Collections**:
+     - Sub-resource nesting (`/provinces/:id/districts`) cleanly mirrors the relational foreign-key topology of Sri Lanka's electrical grid.
+     - Early validation via `validateUuid` intercepts invalid UUID strings before reaching the database, returning standard `400 Bad Request` instead of cryptic database type errors.
+  2. **Composite Resource Aggregation**:
+     - Combines relational parent hierarchy (`grid_substation` -> `district` -> `province`) with real-time aggregate stats (`COUNT`, `MAX(power_kw)`, `AVG(voltage_v)`, latest `energy_kwh`).
+     - Eliminates the need for client frontend applications to perform 4–5 sequential round-trips to render a comprehensive installation overview screen.
+  3. **Derived Operational Resource (`/last-reading`)**:
+     - Rather than exposing generic `/readings?limit=1` table queries or polluting `SolarInstallation` with mutable last-reading columns, `/last-reading` is exposed as an explicit derived REST resource.
+     - Powered by PostgreSQL index-only scans on `(installation_id, timestamp DESC)`, achieving sub-millisecond operational reads.
+  4. **RFC 7231 Compliant Ingestion (`POST /installations/:id/readings`)**:
+     - Returns HTTP status `201 Created`.
+     - Injects a standard `Location: /installations/{id}/readings/{reading.id}` header.
+     - Resolvable via dedicated endpoint `GET /installations/:id/readings/:readingId`.
+
+

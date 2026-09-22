@@ -9,9 +9,39 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Planned / Upcoming
-- Express.js route controllers for the 5-entity hierarchy (`/provinces`, `/districts`, `/substations`, `/installations`, `/readings`).
-- High-throughput ingestion endpoint for real-time meter telemetry (`POST /api/v1/telemetry`).
 - JWT authentication middleware and role-based jurisdiction guards (`national`, `provincial`, `district`).
+- High-throughput batch telemetry ingestion endpoint (`POST /api/v1/telemetry/batch`).
+
+---
+
+## [0.3.0] - 2026-09-22
+
+### Core REST API Routes & Ingestion Path
+
+#### Added
+- **Hierarchy Navigation Endpoints (Scoped Collections)**:
+  - `GET /provinces`: Returns all 9 administrative provinces with district counts and codes.
+  - `GET /provinces/:id/districts`: Scoped collection retrieving districts in a specific province.
+  - `GET /districts/:id/substations`: Scoped collection retrieving CEB/LECO grid substations in a district.
+  - `GET /substations/:id/installations`: Scoped collection retrieving solar installations interconnected to a substation.
+- **Composite Resource (`GET /installations/:id/composite`)**:
+  - Delivers complete installation metadata alongside its parent topology hierarchy (`grid_substation` -> `district` -> `province`).
+  - Calculates real-time telemetry summary metrics (`total_readings`, `latest_cumulative_energy_kwh`, `current_power_kw`, `max_power_kw_recorded`, `avg_voltage_v`, `first_reading_timestamp`, `last_reading_timestamp`).
+- **Operational Derived Resource (`GET /installations/:id/last-reading`)**:
+  - Exposes the single most recent `GenerationReading` as a derived resource rather than a generic table query.
+  - Executes sub-millisecond index scans utilizing the compound index `(installation_id, timestamp DESC)`.
+- **Device Ingestion Write Path (`POST /installations/:id/readings`)**:
+  - Validates incoming reading payloads (`timestamp`, `power_kw`, `energy_kwh`, `voltage_v`).
+  - Appends telemetry directly into `generation_readings` (append-only ledger).
+  - Emits standard `201 Created` with a `Location: /installations/{id}/readings/{reading.id}` header.
+  - Added `GET /installations/:id/readings/:readingId` to resolve the emitted `Location` header.
+- **Middleware & Application Architecture**:
+  - `src/middleware/validateUuid.js`: Route parameter UUID guard preventing database query syntax errors.
+  - `src/middleware/errorHandler.js`: Centralized error handler formatting RFC-standard JSON error responses.
+  - `src/app.js`: Express app instance mounting routes at both `/` and `/api/v1/`.
+  - `src/server.js`: Production HTTP listener with database pre-flight checks.
+  - `tests/test_api.js`: Verification test suite for automated route inspection.
+  - `.gitignore`: Standard Node.js rules excluding `node_modules/`, `.env`, logs, and OS/IDE metadata.
 
 ---
 
