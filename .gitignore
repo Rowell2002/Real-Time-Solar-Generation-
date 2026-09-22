@@ -1,0 +1,48 @@
+# Dependencies
+node_modules/
+package-lock.json.bak
+yarn.lock
+pnpm-lock.yaml
+
+# Environment Variables & Secrets
+.env
+.env.local
+.env.*.local
+*.env
+
+# Runtime Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Test Coverage
+coverage/
+.nyc_output/
+
+# Build & Compiled Output
+dist/
+build/
+
+# Operating System Files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# IDE & Editor Directories
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+*.swo
+*~
+
+# Temporary & Cache Files
+.temp/
+.tmp/
+.cache/
