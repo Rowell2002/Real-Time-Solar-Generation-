@@ -134,6 +134,84 @@ async function runTests() {
             energy_kwh: 'abc', // Not a number
           });
           assert(badPayloadRes.status === 400, 'Invalid payload returns 400 Bad Request');
+
+          // ====================================================================
+          // 10. Analytical Historical Readings: GET /installations/:id/readings
+          // ====================================================================
+          console.log('\n  -- Testing Analytical Readings Endpoint (Rubric Criteria) --');
+          
+          // 10a. Pagination defaults
+          const readingsRes = await request('GET', `/installations/${firstInstallation.id}/readings?page=1&limit=10`);
+          assert(readingsRes.status === 200, 'GET /installations/:id/readings returns 200 OK');
+          assert(typeof readingsRes.data?.total_count === 'number', 'Response has total_count');
+          assert(readingsRes.data?.page === 1, 'Response page is 1');
+          assert(readingsRes.data?.limit === 10, 'Response limit is 10');
+          assert(Array.isArray(readingsRes.data?.data), 'Response data is array');
+          assert(!!readingsRes.data?.links?.self, 'Response contains links.self');
+
+          // Check ETag and Last-Modified headers
+          const etag = readingsRes.headers.get('etag');
+          const lastModified = readingsRes.headers.get('last-modified');
+          assert(!!etag, `Response contains ETag header: ${etag}`);
+          assert(!!lastModified, `Response contains Last-Modified header: ${lastModified}`);
+
+          // 10b. Content Negotiation
+          const res406 = await fetch(`${baseUrl}/installations/${firstInstallation.id}/readings`, {
+            headers: { 'Accept': 'text/html, application/xml' },
+          });
+          assert(res406.status === 406, "Accept: text/html returns 406 Not Acceptable");
+
+          // 10c. Conditional GET (If-None-Match) -> 304 Not Modified
+          if (etag) {
+            const res304Etag = await fetch(`${baseUrl}/installations/${firstInstallation.id}/readings?page=1&limit=10`, {
+              headers: { 'If-None-Match': etag },
+            });
+            assert(res304Etag.status === 304, "If-None-Match with matching ETag returns 304 Not Modified");
+          }
+
+          // 10d. Conditional GET (If-Modified-Since) -> 304 Not Modified
+          if (lastModified) {
+            const res304Mod = await fetch(`${baseUrl}/installations/${firstInstallation.id}/readings?page=1&limit=10`, {
+              headers: { 'If-Modified-Since': lastModified },
+            });
+            assert(res304Mod.status === 304, "If-Modified-Since with matching date returns 304 Not Modified");
+          }
+
+          // 10e. Precondition Failed (If-Match) -> 412
+          const res412 = await fetch(`${baseUrl}/installations/${firstInstallation.id}/readings?page=1&limit=10`, {
+            headers: { 'If-Match': '"outdated-etag-value"' },
+          });
+          assert(res412.status === 412, "If-Match mismatch returns 412 Precondition Failed");
+
+          // 10f. Sorting: ?sort=timestamp (ASC) vs ?sort=-timestamp (DESC)
+          const sortAscRes = await request('GET', `/installations/${firstInstallation.id}/readings?sort=timestamp&limit=5`);
+          assert(sortAscRes.status === 200, "GET ?sort=timestamp returns 200");
+          if (sortAscRes.data?.data?.length >= 2) {
+            const t0 = new Date(sortAscRes.data.data[0].timestamp).getTime();
+            const t1 = new Date(sortAscRes.data.data[1].timestamp).getTime();
+            assert(t0 <= t1, "?sort=timestamp returns records in ascending chronological order");
+          }
+
+          const sortDescRes = await request('GET', `/installations/${firstInstallation.id}/readings?sort=-timestamp&limit=5`);
+          assert(sortDescRes.status === 200, "GET ?sort=-timestamp returns 200");
+          if (sortDescRes.data?.data?.length >= 2) {
+            const t0 = new Date(sortDescRes.data.data[0].timestamp).getTime();
+            const t1 = new Date(sortDescRes.data.data[1].timestamp).getTime();
+            assert(t0 >= t1, "?sort=-timestamp returns records in descending chronological order");
+          }
+
+          // 10g. Time Window Filtering: ?start_time=...&end_time=...
+          const timeWindowRes = await request(
+            'GET',
+            `/installations/${firstInstallation.id}/readings?start_time=2026-09-01T00:00:00Z&end_time=2026-09-30T23:59:59Z&limit=5`
+          );
+          assert(timeWindowRes.status === 200, "GET with valid ?start_time & ?end_time returns 200");
+
+          const invalidTimeRes = await request(
+            'GET',
+            `/installations/${firstInstallation.id}/readings?start_time=invalid-date`
+          );
+          assert(invalidTimeRes.status === 400, "GET with invalid start_time returns 400 Bad Request");
         }
       }
     }

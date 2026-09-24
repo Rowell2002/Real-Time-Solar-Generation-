@@ -14,6 +14,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.4.0] - 2026-09-24
+
+### Analytical Historical Readings Endpoint (`GET /installations/:id/readings`)
+
+#### Added
+- **Hypermedia HATEOAS Pagination**:
+  - Supports query parameters `page` (default `1`) and `limit` (default `50`, max `200`).
+  - Standardized JSON envelope: `{ total_count, page, limit, data, links: { self, next, prev } }`.
+  - Preserves all query filtering and sorting options in the generated navigation URIs.
+- **Multi-dimensional Filtering & Sorting**:
+  - Time window filtering: `?start_time=ISO8601&end_time=ISO8601` with ISO format validation.
+  - Geographical / grid topology filtering: `?province_id=X&district_id=Y&substation_id=Z`.
+  - Chronological sorting: `?sort=timestamp` (ascending) and `?sort=-timestamp` (descending, default).
+- **HTTP Caching, Conditional GET & Status Codes**:
+  - Deterministic SHA-256 `ETag` generation based on dataset query criteria and record hashes.
+  - `Last-Modified` derivation formatted in RFC 7232 HTTP date.
+  - Conditional GET handling: returns `304 Not Modified` on matching `If-None-Match` or valid `If-Modified-Since`.
+  - Precondition verification: returns `412 Precondition Failed` if `If-Match` or `If-Unmodified-Since` evaluations fail.
+  - Content Negotiation: returns `406 Not Acceptable` if `Accept` header excludes `application/json`.
+  - Explicit enforcement of `Content-Type: application/json; charset=utf-8`.
+- **Testing & Verification**:
+  - `tests/test_unit_readings.js`: Unit test suite testing Content Negotiation (406), Pagination (400), Sorting (400), Time filtering (400), ETag generation, Conditional GET (304), and Preconditions (412).
+
+
 ## [0.3.0] - 2026-09-22
 
 ### Core REST API Routes & Ingestion Path

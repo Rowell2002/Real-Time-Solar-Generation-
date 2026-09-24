@@ -166,4 +166,27 @@ As the number of grid-connected solar installations grows across Sri Lanka, `gen
      - Injects a standard `Location: /installations/{id}/readings/{reading.id}` header.
      - Resolvable via dedicated endpoint `GET /installations/:id/readings/:readingId`.
 
+---
+
+### ADR-10: HTTP Caching, Conditional GET, Preconditions & Hypermedia Pagination
+
+* **Context**: Analytical historical reading queries (`GET /installations/{id}/readings`) are read-heavy, query-intensive, and involve time-series data covering hundreds of thousands of records.
+* **Specification Decisions**:
+  1. **Hypermedia (HATEOAS) Pagination**:
+     - Enforces standard pagination envelope: `{ total_count, page, limit, data, links: { self, next, prev } }`.
+     - The hypermedia links preserve all active filtering flags (`start_time`, `end_time`, `sort`, `province_id`, `district_id`, `substation_id`), enabling clients to crawl analytical intervals without manual query string manipulation.
+  2. **SHA-256 ETag Generation**:
+     - Calculated deterministically over the query parameters, total count, and record set representation.
+     - Protects against redundant network payload transfers when telemetry data within a queried interval has not changed.
+  3. **RFC 7232 Conditional GET Evaluation (HTTP 304)**:
+     - Evaluates incoming `If-None-Match` and `If-Modified-Since` headers before serialization.
+     - Returns HTTP `304 Not Modified` with an empty response body when the representation is unchanged, saving bandwidth and CPU cycles.
+  4. **Precondition Evaluation (HTTP 412)**:
+     - Complies with RFC 7232 precondition semantics.
+     - Returns HTTP `412 Precondition Failed` if an `If-Match` or `If-Unmodified-Since` header evaluation fails.
+  5. **RFC 7231 Content Negotiation (HTTP 406)**:
+     - Inspects the `Accept` header. If the client explicitly requests formats incompatible with `application/json` (e.g. `text/html`, `application/xml`), the server rejects the request with HTTP `406 Not Acceptable`.
+     - Strictly enforces `Content-Type: application/json; charset=utf-8` on all outgoing responses.
+
+
 
