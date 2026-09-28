@@ -188,5 +188,30 @@ As the number of grid-connected solar installations grows across Sri Lanka, `gen
      - Inspects the `Accept` header. If the client explicitly requests formats incompatible with `application/json` (e.g. `text/html`, `application/xml`), the server rejects the request with HTTP `406 Not Acceptable`.
      - Strictly enforces `Content-Type: application/json; charset=utf-8` on all outgoing responses.
 
+---
+
+### ADR-11: MySQL 8.0+ / MariaDB 10.5+ Single-Query Window Aggregation for Dashboard Summaries
+
+* **Context**: The operational dashboard endpoint (`GET /districts/{id}/summary`) aggregates generation metrics across dozens of installations and multiple substations in a single district. Traditional ORM implementations suffer from severe N+1 query patterns:
+  1. Fetch District $\rightarrow$ 1 query.
+  2. Fetch Substations for District $\rightarrow$ 1 query.
+  3. For each Substation, fetch Installations $\rightarrow$ N queries.
+  4. For each Installation, fetch the latest GenerationReading and today's cumulative readings $\rightarrow$ 2 × M queries.
+* **Specification Decisions**:
+  1. **Single Query with Common Table Expressions (CTEs)**:
+     - All calculations (district existence, active installation counts, latest instantaneous power, and today's energy) are collapsed into a **single SQL query execution**.
+  2. **Window Function for Latest Reading (`ROW_NUMBER() OVER`)**:
+     - `ROW_NUMBER() OVER (PARTITION BY r.installation_id ORDER BY r.timestamp DESC) AS rn` isolates the latest instantaneous reading per installation directly inside the database engine.
+     - Filtering `rn = 1` avoids expensive correlated subqueries or repeated `MAX(timestamp)` self-joins.
+  3. **Today's Cumulative Energy Slicing**:
+     - Uses `DATE(r.timestamp) = CURRENT_DATE` to isolate generation occurring within the current calendar day.
+     - Calculates delta energy produced today as `COALESCE(MAX(r.energy_kwh) - MIN(r.energy_kwh), 0)`.
+  4. **Substation Breakdown Rollup**:
+     - The single query projects each substation's capacity, site count, and current power generation alongside the district metadata.
+     - If the district exists with 0 substations, an outer join ensures the district is still returned, while a non-existent district ID returns 0 rows $\rightarrow$ triggering HTTP `404 Not Found`.
+  5. **Cache Header Attachment**:
+     - Calculates SHA-256 `ETag` on the response payload and evaluates `If-None-Match`, returning HTTP `304 Not Modified` when cached data is fresh.
+
+
 
 

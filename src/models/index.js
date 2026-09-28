@@ -3,8 +3,11 @@ const { Sequelize } = require('sequelize');
 // Load environment configuration or fallback
 const databaseUrl = process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/slsea_solar';
 
+// Detect dialect: 'mysql', 'mariadb', or 'postgres'
+const dialect = process.env.DB_DIALECT || (databaseUrl.startsWith('mysql') ? 'mysql' : databaseUrl.startsWith('mariadb') ? 'mariadb' : 'postgres');
+
 const sequelize = new Sequelize(databaseUrl, {
-  dialect: 'postgres',
+  dialect,
   logging: process.env.NODE_ENV === 'development' ? console.log : false,
   define: {
     underscored: true,

@@ -14,6 +14,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.5.0] - 2026-09-28
+
+### Operational Dashboard District Summary Resource (`GET /districts/:id/summary`)
+
+#### Added
+- **Operational Dashboard Summary Endpoint (`GET /districts/:id/summary`)**:
+  - Dynamically calculates aggregate generation and capacity metrics across all installations in a specified district.
+  - Implements a single optimized query leveraging MySQL 8.0+ / MariaDB 10.5+ CTEs and the window function `ROW_NUMBER() OVER (PARTITION BY installation_id ORDER BY timestamp DESC)` to retrieve the single latest reading per site without N+1 query overhead.
+  - Calculates `today_total_energy_kwh` using ANSI / MySQL standard `DATE(timestamp) = CURRENT_DATE`.
+  - Delivers a structured `substation_breakdown` containing site counts, substation capacity, and current power generation sums.
+- **Protocol & Caching Enhancements**:
+  - Computes deterministic SHA-256 `ETag` headers for cache validation.
+  - Supports RFC 7232 Conditional GET (`If-None-Match`), returning HTTP `304 Not Modified` on cache hits.
+  - Returns standard HTTP `404 Not Found` with structured JSON if the district ID does not exist in the database.
+- **Multi-Dialect Compatibility**:
+  - Added `mysql2` driver support in `package.json`.
+  - Updated `src/models/index.js` to dynamically detect database dialect from connection strings or environment variables.
+- **Testing & Verification**:
+  - `tests/test_district_summary.js`: Unit test suite verifying single-query execution, window function usage, aggregation accuracy, ETag generation, 304 conditional GET, and 404 error responses.
+
 ## [0.4.0] - 2026-09-24
 
 ### Analytical Historical Readings Endpoint (`GET /installations/:id/readings`)
