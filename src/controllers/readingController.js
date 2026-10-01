@@ -376,10 +376,12 @@ async function createReading(req, res, next) {
     const { id } = req.params;
     const { timestamp, power_kw, energy_kwh, voltage_v } = req.body;
 
-    // 1. Verify installation exists
-    const installation = await SolarInstallation.findByPk(id, {
-      attributes: ['id', 'name', 'meter_id'],
-    });
+    // 1. Verify installation exists (or use cached from authorizeDeviceWrite middleware)
+    const installation =
+      req.targetInstallation ||
+      (await SolarInstallation.findByPk(id, {
+        attributes: ['id', 'name', 'meter_id'],
+      }));
 
     if (!installation) {
       return res.status(404).json({

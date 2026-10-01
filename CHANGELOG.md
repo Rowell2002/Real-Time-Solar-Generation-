@@ -9,10 +9,36 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Planned / Upcoming
-- JWT authentication middleware and role-based jurisdiction guards (`national`, `provincial`, `district`).
 - High-throughput batch telemetry ingestion endpoint (`POST /api/v1/telemetry/batch`).
+- Rate limiting and API quota enforcement per hardware meter device.
 
 ---
+
+## [0.6.0] - 2026-10-01
+
+### JWT Bearer Authentication & RBAC Security Layer (Write-Read Security Split)
+
+#### Added
+- **Zero-Trust Write-Read Security Split**:
+  - **Device Write Authorization (Metering Devices)**:
+    - Enforces JWT Bearer authentication containing claim `scope: "installation:write:{installation_id}"`.
+    - `authorizeDeviceWrite` middleware validates that the installation exists in the MySQL/PostgreSQL `solar_installations` table.
+    - Prevents cross-device tampering: If device token for Installation 12 attempts to post readings to Installation 15, request is immediately rejected with HTTP `403 Forbidden`.
+    - Successful ingestion appends to `generation_readings` and returns HTTP `201 Created` with header `Location: /installations/{id}/readings/{reading_id}`.
+  - **Jurisdictional User Authorization (SLSEA Analysts)**:
+    - `authorizeJurisdiction` middleware inspects roles (`national`, `provincial`, `district`) and scopes (`read:national`, `read:province:{id}`, `read:district:{id}`).
+    - **National Scope**: Grants full read access across all entities, districts, substations, and installations.
+    - **Provincial Scope**: Strictly restricts read access to entities located within the analyst's assigned `province_id`. Accessing out-of-province districts or installations returns HTTP `403 Forbidden`.
+    - **District Scope**: Restricts read access strictly to entities within the analyst's assigned `district_id`. Accessing unassigned districts or province-level resources returns HTTP `403 Forbidden`.
+- **HTTPS Enforcement & Transport Security**:
+  - `requireHttps` middleware enforces encrypted transmission in production environments, rejecting insecure HTTP calls with HTTP `403 Forbidden`.
+  - Injects `Strict-Transport-Security: max-age=31536000; includeSubDomains` header on all responses.
+  - RFC 6750 Bearer token parsing rejecting missing or malformed authentication headers with HTTP `401 Unauthorized`.
+- **JWT Utilities (`src/utils/jwtUtils.js`)**:
+  - Token signing and verification helpers with configurable secrets and expiry.
+  - Dedicated token generators for metering devices (`generateDeviceToken`) and jurisdictional users (`generateUserToken`).
+- **Testing & Verification**:
+  - `tests/test_auth_rbac.js`: Comprehensive 24-test security suite verifying 401s, device write cross-tampering 403s, jurisdictional boundary enforcement, and HTTPS enforcement.
 
 ## [0.5.0] - 2026-09-28
 

@@ -3,8 +3,12 @@
 const express = require('express');
 const routes = require('./routes');
 const errorHandler = require('./middleware/errorHandler');
+const requireHttps = require('./middleware/requireHttps');
 
 const app = express();
+
+// Enforce HTTPS and security headers
+app.use(requireHttps);
 
 // Standard middleware
 app.use(express.json());
