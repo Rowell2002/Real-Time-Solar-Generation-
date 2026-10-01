@@ -212,6 +212,30 @@ As the number of grid-connected solar installations grows across Sri Lanka, `gen
   5. **Cache Header Attachment**:
      - Calculates SHA-256 `ETag` on the response payload and evaluates `If-None-Match`, returning HTTP `304 Not Modified` when cached data is fresh.
 
+---
+
+### ADR-12: Zero-Trust Write-Read Security Split & Cryptographic Jurisdictional Scoping
+
+* **Context**: The SLSEA platform handles both untrusted hardware meter device writes and multi-tiered jurisdictional user analysis. Traditional single-role API security models fail to separate automated telemetry ingestion from administrative portal monitoring.
+* **Specification Decisions**:
+  1. **Strict Write-Read Security Split**:
+     - **Device Principal (Write Path)**:
+       - Smart meters authenticate with JWT tokens carrying a scoped capability: `installation:write:{installation_id}`.
+       - The ingestion endpoint (`POST /installations/:id/readings`) explicitly requires this claim.
+       - A device authorized for Installation 12 attempting to write to Installation 15 is rejected with HTTP `403 Forbidden`.
+       - Eliminates cross-site injection, credential sharing across physical solar farms, and rogue meter spoofing.
+     - **User Principal (Read Path)**:
+       - Portal analysts authenticate with tokens identifying their administrative role (`national`, `provincial`, `district`) and cryptographic scopes (`read:national`, `read:province:{id}`, `read:district:{id}`).
+  2. **Multi-Tiered Jurisdictional Scoping (RBAC Matrix)**:
+     - **National**: Unrestricted read access across the entire national solar topology.
+     - **Provincial**: Allowed read access strictly bounded to entities whose parent province matches the user's `jurisdiction_id`. Any query attempting to access out-of-province districts, substations, or installations returns HTTP `403 Forbidden`.
+     - **District**: Bounded strictly to entities whose parent district matches the user's `jurisdiction_id`. Any attempt to access other districts or province-wide collections returns HTTP `403 Forbidden`.
+  3. **Transport Layer Security & Header Enforcement**:
+     - Rejects unencrypted HTTP requests in production with HTTP `403 Forbidden`.
+     - Enforces standard HTTP Strict Transport Security (`Strict-Transport-Security: max-age=31536000; includeSubDomains`).
+     - Mandates RFC 6750 `Authorization: Bearer <token>` header syntax, returning HTTP `401 Unauthorized` on missing or malformed authentication tokens.
+
+
 
 
 
