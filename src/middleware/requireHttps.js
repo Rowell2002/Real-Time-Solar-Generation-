@@ -13,8 +13,10 @@ function requireHttps(req, res, next) {
 
   if (isProduction && !isHttps) {
     return res.status(403).json({
-      error: 'Forbidden',
-      message: 'HTTPS is required for all API communications. Unencrypted HTTP requests are strictly forbidden.',
+      code: 'FORBIDDEN',
+      message: 'HTTPS connection is required.',
+      detail: 'HTTPS is required for all API communications. Unencrypted HTTP requests are strictly forbidden.',
+      timestamp: new Date().toISOString(),
     });
   }
 

@@ -12,6 +12,41 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - High-throughput batch telemetry ingestion endpoint (`POST /api/v1/telemetry/batch`).
 - Rate limiting and API quota enforcement per hardware meter device.
 
+## [0.7.0] - 2026-10-02
+
+### Global Exception Handler & Live OpenAPI (Swagger UI) Specification
+
+#### Added
+- **Global Standardized Exception Handler (`src/middleware/errorHandler.js` & `src/utils/apiError.js`)**:
+  - Unifies error contracts across the entire REST API into a strict 4-property JSON format:
+    ```json
+    {
+      "code": "STRING_ERROR_CODE",
+      "message": "Human-readable summary message.",
+      "detail": "Specific technical detail or parameter error.",
+      "timestamp": "ISO8601_TIMESTAMP"
+    }
+    ```
+  - Standardized HTTP status code mapping and handling:
+    - `400 Bad Request` (`BAD_REQUEST`): Malformed syntax, invalid pagination, invalid UUID format, or chronology errors.
+    - `401 Unauthorized` (`UNAUTHORIZED`): Missing, malformed, or expired JWT Bearer credentials.
+    - `403 Forbidden` (`FORBIDDEN`): Device token scope mismatch or jurisdictional analyst boundary violation.
+    - `404 Not Found` (`NOT_FOUND`): Non-existent provinces, districts, substations, installations, or readings.
+    - `406 Not Acceptable` (`NOT_ACCEPTABLE`): Content negotiation failure when client does not accept `application/json`.
+    - `412 Precondition Failed` (`PRECONDITION_FAILED`): Cache precondition headers (`If-Match`, `If-Unmodified-Since`) evaluating to false.
+    - `422 Validation Error` (`VALIDATION_ERROR`): Entity semantic constraint and attribute validation failures.
+  - Specialized MySQL / Sequelize Database Exception Handling:
+    - **Foreign Key Failures** (MySQL errno `1451`/`1452` / `SequelizeForeignKeyConstraintError`): Mapped to HTTP `422` with code `"FOREIGN_KEY_VIOLATION"`.
+    - **Duplicate Keys** (MySQL errno `1062` / `SequelizeUniqueConstraintError`): Mapped to HTTP `409` with code `"DUPLICATE_KEY_ERROR"`.
+    - **Connection Timeouts & Network Failures** (`ETIMEDOUT`, `ECONNREFUSED`, `PROTOCOL_CONNECTION_LOST`, `SequelizeConnectionTimedOutError`): Mapped to HTTP `503` with code `"DATABASE_CONNECTION_TIMEOUT"`.
+- **Live OpenAPI 3.0 Documentation (`/docs`)**:
+  - Mounted Swagger UI at `/docs` with title `'SLSEA Solar Generation Monitoring API Documentation'`.
+  - Machine-readable raw OpenAPI JSON served at `/docs/openapi.json` and `/api-docs.json`.
+  - Defined `BearerAuth` in `components/securitySchemes` (`http bearer`, format `JWT`) allowing evaluators to test device and user roles directly inside Swagger UI.
+  - Provided comprehensive JSON schemas for all 2xx success payloads and 4xx/5xx error bodies across all 11 API routes with operational descriptions, tags, operation IDs, and parameters.
+- **Automated Verification Suite (`tests/test_error_and_docs.js`)**:
+  - 58 assertions covering status codes (400, 401, 403, 404, 406, 412, 422), MySQL exception transformations, live `/docs` HTML rendering, OpenAPI 3.0 spec compliance, and `BearerAuth` security schemes.
+
 ---
 
 ## [0.6.0] - 2026-10-01

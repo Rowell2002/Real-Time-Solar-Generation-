@@ -151,7 +151,7 @@ async function runSecurityTests() {
       await authorizeDeviceWrite(reqForbidden, resForbidden, () => { forbiddenNext = true; });
       assert(!forbiddenNext, 'Forbidden device write blocked before controller');
       assert(resForbidden.statusCode === 403, 'Device for installation A posting to B returns 403 Forbidden');
-      assert(resForbidden.body?.error === 'Forbidden', 'Standardized Forbidden JSON body returned');
+      assert(resForbidden.body?.code === 'FORBIDDEN', 'Standardized Forbidden JSON body returned');
 
       // 2c. Target installation does not exist in MySQL -> 404 Not Found
       const reqMissing = {

@@ -38,8 +38,10 @@ async function getSubstationInstallations(req, res, next) {
 
     if (!substation) {
       return res.status(404).json({
-        error: 'Not Found',
-        message: `GridSubstation with id '${id}' was not found.`,
+        code: 'NOT_FOUND',
+        message: 'The requested grid substation was not found.',
+        detail: `GridSubstation with id '${id}' was not found.`,
+        timestamp: new Date().toISOString(),
       });
     }
 

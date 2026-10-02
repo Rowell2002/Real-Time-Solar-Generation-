@@ -1,6 +1,6 @@
 'use strict';
 
-const { Province, District, GridSubstation, SolarInstallation } = require('../models');
+const { District, GridSubstation, SolarInstallation } = require('../models');
 
 /**
  * Middleware factory for Jurisdictional RBAC on read paths.
@@ -16,8 +16,10 @@ function authorizeJurisdiction(resourceType) {
 
       if (!auth) {
         return res.status(401).json({
-          error: 'Unauthorized',
-          message: 'Authentication required for jurisdictional resource access.',
+          code: 'UNAUTHORIZED',
+          message: 'Authentication credentials are required.',
+          detail: 'Authentication required for jurisdictional resource access.',
+          timestamp: new Date().toISOString(),
         });
       }
 
@@ -38,7 +40,6 @@ function authorizeJurisdiction(resourceType) {
 
       // Handle root collection read: GET /provinces
       if (!targetId && resourceType === 'province') {
-        // Provincial users can list provinces or access root, but downstream scoped queries filter by province
         return next();
       }
 
@@ -46,8 +47,10 @@ function authorizeJurisdiction(resourceType) {
       if (role === 'provincial') {
         if (!jurisdictionId) {
           return res.status(403).json({
-            error: 'Forbidden',
-            message: 'Access denied: Provincial user has no assigned province_id.',
+            code: 'FORBIDDEN',
+            message: 'Access denied: Insufficient jurisdictional scope.',
+            detail: 'Provincial user has no assigned province_id in claims.',
+            timestamp: new Date().toISOString(),
           });
         }
 
@@ -55,16 +58,20 @@ function authorizeJurisdiction(resourceType) {
         const expectedScope = `read:province:${jurisdictionId}`;
         if (!userScopes.includes(expectedScope) && !userScopes.includes('read:national')) {
           return res.status(403).json({
-            error: 'Forbidden',
-            message: `Access denied: Missing required scope claim '${expectedScope}'.`,
+            code: 'FORBIDDEN',
+            message: 'Access denied: Insufficient jurisdictional scope.',
+            detail: `Missing required scope claim '${expectedScope}'.`,
+            timestamp: new Date().toISOString(),
           });
         }
 
         if (resourceType === 'province') {
           if (targetId !== jurisdictionId) {
             return res.status(403).json({
-              error: 'Forbidden',
-              message: `Access denied: User is restricted to province '${jurisdictionId}'.`,
+              code: 'FORBIDDEN',
+              message: 'Access denied: Provincial boundary restriction.',
+              detail: `User is restricted to province '${jurisdictionId}'.`,
+              timestamp: new Date().toISOString(),
             });
           }
           return next();
@@ -73,12 +80,19 @@ function authorizeJurisdiction(resourceType) {
         if (resourceType === 'district') {
           const district = await District.findByPk(targetId, { attributes: ['id', 'province_id'] });
           if (!district) {
-            return res.status(404).json({ error: 'Not Found', message: `District with id '${targetId}' was not found.` });
+            return res.status(404).json({
+              code: 'NOT_FOUND',
+              message: 'District not found.',
+              detail: `District with id '${targetId}' was not found.`,
+              timestamp: new Date().toISOString(),
+            });
           }
           if (district.province_id !== jurisdictionId) {
             return res.status(403).json({
-              error: 'Forbidden',
-              message: `Access denied: District does not belong to authorized province '${jurisdictionId}'.`,
+              code: 'FORBIDDEN',
+              message: 'Access denied: Provincial boundary restriction.',
+              detail: `District does not belong to authorized province '${jurisdictionId}'.`,
+              timestamp: new Date().toISOString(),
             });
           }
           return next();
@@ -90,12 +104,19 @@ function authorizeJurisdiction(resourceType) {
             include: [{ model: District, as: 'district', attributes: ['id', 'province_id'] }],
           });
           if (!substation) {
-            return res.status(404).json({ error: 'Not Found', message: `GridSubstation with id '${targetId}' was not found.` });
+            return res.status(404).json({
+              code: 'NOT_FOUND',
+              message: 'GridSubstation not found.',
+              detail: `GridSubstation with id '${targetId}' was not found.`,
+              timestamp: new Date().toISOString(),
+            });
           }
           if (substation.district?.province_id !== jurisdictionId) {
             return res.status(403).json({
-              error: 'Forbidden',
-              message: `Access denied: Substation does not belong to authorized province '${jurisdictionId}'.`,
+              code: 'FORBIDDEN',
+              message: 'Access denied: Provincial boundary restriction.',
+              detail: `Substation does not belong to authorized province '${jurisdictionId}'.`,
+              timestamp: new Date().toISOString(),
             });
           }
           return next();
@@ -114,12 +135,19 @@ function authorizeJurisdiction(resourceType) {
             ],
           });
           if (!installation) {
-            return res.status(404).json({ error: 'Not Found', message: `SolarInstallation with id '${targetId}' was not found.` });
+            return res.status(404).json({
+              code: 'NOT_FOUND',
+              message: 'SolarInstallation not found.',
+              detail: `SolarInstallation with id '${targetId}' was not found.`,
+              timestamp: new Date().toISOString(),
+            });
           }
           if (installation.grid_substation?.district?.province_id !== jurisdictionId) {
             return res.status(403).json({
-              error: 'Forbidden',
-              message: `Access denied: Installation does not belong to authorized province '${jurisdictionId}'.`,
+              code: 'FORBIDDEN',
+              message: 'Access denied: Provincial boundary restriction.',
+              detail: `Installation does not belong to authorized province '${jurisdictionId}'.`,
+              timestamp: new Date().toISOString(),
             });
           }
           return next();
@@ -130,8 +158,10 @@ function authorizeJurisdiction(resourceType) {
       if (role === 'district') {
         if (!jurisdictionId) {
           return res.status(403).json({
-            error: 'Forbidden',
-            message: 'Access denied: District user has no assigned district_id.',
+            code: 'FORBIDDEN',
+            message: 'Access denied: Insufficient jurisdictional scope.',
+            detail: 'District user has no assigned district_id in claims.',
+            timestamp: new Date().toISOString(),
           });
         }
 
@@ -139,23 +169,29 @@ function authorizeJurisdiction(resourceType) {
         const expectedScope = `read:district:${jurisdictionId}`;
         if (!userScopes.includes(expectedScope) && !userScopes.includes('read:national')) {
           return res.status(403).json({
-            error: 'Forbidden',
-            message: `Access denied: Missing required scope claim '${expectedScope}'.`,
+            code: 'FORBIDDEN',
+            message: 'Access denied: Insufficient jurisdictional scope.',
+            detail: `Missing required scope claim '${expectedScope}'.`,
+            timestamp: new Date().toISOString(),
           });
         }
 
         if (resourceType === 'province') {
           return res.status(403).json({
-            error: 'Forbidden',
-            message: `Access denied: District user cannot access province-level collections.`,
+            code: 'FORBIDDEN',
+            message: 'Access denied: District boundary restriction.',
+            detail: 'District user cannot access province-level collections.',
+            timestamp: new Date().toISOString(),
           });
         }
 
         if (resourceType === 'district') {
           if (targetId !== jurisdictionId) {
             return res.status(403).json({
-              error: 'Forbidden',
-              message: `Access denied: User is restricted to district '${jurisdictionId}'.`,
+              code: 'FORBIDDEN',
+              message: 'Access denied: District boundary restriction.',
+              detail: `User is restricted to district '${jurisdictionId}'.`,
+              timestamp: new Date().toISOString(),
             });
           }
           return next();
@@ -164,12 +200,19 @@ function authorizeJurisdiction(resourceType) {
         if (resourceType === 'substation') {
           const substation = await GridSubstation.findByPk(targetId, { attributes: ['id', 'district_id'] });
           if (!substation) {
-            return res.status(404).json({ error: 'Not Found', message: `GridSubstation with id '${targetId}' was not found.` });
+            return res.status(404).json({
+              code: 'NOT_FOUND',
+              message: 'GridSubstation not found.',
+              detail: `GridSubstation with id '${targetId}' was not found.`,
+              timestamp: new Date().toISOString(),
+            });
           }
           if (substation.district_id !== jurisdictionId) {
             return res.status(403).json({
-              error: 'Forbidden',
-              message: `Access denied: Substation is outside authorized district '${jurisdictionId}'.`,
+              code: 'FORBIDDEN',
+              message: 'Access denied: District boundary restriction.',
+              detail: `Substation is outside authorized district '${jurisdictionId}'.`,
+              timestamp: new Date().toISOString(),
             });
           }
           return next();
@@ -181,12 +224,19 @@ function authorizeJurisdiction(resourceType) {
             include: [{ model: GridSubstation, as: 'grid_substation', attributes: ['id', 'district_id'] }],
           });
           if (!installation) {
-            return res.status(404).json({ error: 'Not Found', message: `SolarInstallation with id '${targetId}' was not found.` });
+            return res.status(404).json({
+              code: 'NOT_FOUND',
+              message: 'SolarInstallation not found.',
+              detail: `SolarInstallation with id '${targetId}' was not found.`,
+              timestamp: new Date().toISOString(),
+            });
           }
           if (installation.grid_substation?.district_id !== jurisdictionId) {
             return res.status(403).json({
-              error: 'Forbidden',
-              message: `Access denied: Installation is outside authorized district '${jurisdictionId}'.`,
+              code: 'FORBIDDEN',
+              message: 'Access denied: District boundary restriction.',
+              detail: `Installation is outside authorized district '${jurisdictionId}'.`,
+              timestamp: new Date().toISOString(),
             });
           }
           return next();
@@ -195,8 +245,10 @@ function authorizeJurisdiction(resourceType) {
 
       // If role is unrecognized or unsupported
       return res.status(403).json({
-        error: 'Forbidden',
-        message: `Access denied: Role '${role}' is not authorized for this resource.`,
+        code: 'FORBIDDEN',
+        message: 'Access denied: Unauthorized role.',
+        detail: `Role '${role}' is not authorized for this resource.`,
+        timestamp: new Date().toISOString(),
       });
     } catch (error) {
       next(error);

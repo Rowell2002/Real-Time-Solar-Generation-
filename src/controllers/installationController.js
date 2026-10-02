@@ -55,8 +55,10 @@ async function getCompositeInstallation(req, res, next) {
 
     if (!installation) {
       return res.status(404).json({
-        error: 'Not Found',
-        message: `SolarInstallation with id '${id}' was not found.`,
+        code: 'NOT_FOUND',
+        message: 'The requested solar installation was not found.',
+        detail: `SolarInstallation with id '${id}' was not found.`,
+        timestamp: new Date().toISOString(),
       });
     }
 
@@ -126,8 +128,10 @@ async function getLastReading(req, res, next) {
 
     if (!installation) {
       return res.status(404).json({
-        error: 'Not Found',
-        message: `SolarInstallation with id '${id}' was not found.`,
+        code: 'NOT_FOUND',
+        message: 'The requested solar installation was not found.',
+        detail: `SolarInstallation with id '${id}' was not found.`,
+        timestamp: new Date().toISOString(),
       });
     }
 
@@ -140,8 +144,10 @@ async function getLastReading(req, res, next) {
 
     if (!lastReading) {
       return res.status(404).json({
-        error: 'Not Found',
-        message: `No telemetry readings found for installation '${id}'.`,
+        code: 'NOT_FOUND',
+        message: 'No telemetry readings found.',
+        detail: `No telemetry readings found for installation '${id}'.`,
+        timestamp: new Date().toISOString(),
       });
     }
 
