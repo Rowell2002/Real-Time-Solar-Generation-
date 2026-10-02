@@ -2,7 +2,7 @@
 
 **Project:** Sri Lanka Sustainable Energy Authority (SLSEA) - Solar Generation Tracking Platform  
 **Target Runtime:** Node.js / Express.js  
-**Database:** PostgreSQL  
+**Database:** PostgreSQL / MySQL 8.0+  
 **Author:** Senior Backend Architecture Team  
 
 ---
@@ -39,7 +39,7 @@ In addition, the `User` entity provides authentication and role-based jurisdicti
 * **Requirement**: *CRITICAL: This is an append-only time-series table. Do not store last-known readings as columns on SolarInstallation.*
 * **Context**: In some architectures, developers maintain denormalized columns like `last_power_kw` or `last_reading_at` on the parent installation row to speed up dashboard queries.
 * **Why Denormalization Was Rejected**:
-  1. **Write Amplification & Row Locking**: In PostgreSQL, every `UPDATE` on `solar_installations` creates a new row version (MVCC), causing table bloat and locking the parent record. Under concurrent telemetry streaming from hundreds of thousands of meters, this creates massive write bottlenecks.
+  1. **Write Amplification & Row Locking**: In PostgreSQL/MySQL, every `UPDATE` on `solar_installations` creates a new row version (MVCC), causing table bloat and locking the parent record. Under concurrent telemetry streaming from hundreds of thousands of meters, this creates massive write bottlenecks.
   2. **Audit Integrity**: Solar power generation involves billing, tariff reconciliation, and regulatory compliance. Storing an append-only ledger guarantees historical immutability.
 * **How High-Performance Retrieval is Solved**:
   - We use a composite B-Tree index on `(installation_id, timestamp DESC)`.
@@ -56,7 +56,7 @@ In addition, the `User` entity provides authentication and role-based jurisdicti
 
 ### ADR-03: Primary Key Strategy (UUIDv4 vs. 64-Bit BIGINT)
 * **Structural Entities (`Province`, `District`, `GridSubstation`, `SolarInstallation`, `User`)**:
-  - **Type**: `UUID` with PostgreSQL `gen_random_uuid()`.
+  - **Type**: `UUID` with database native UUID generation.
   - **Reasoning**: Prevents enumeration attacks (e.g., guessing installation IDs `/api/v1/installations/123`), simplifies distributed imports, and prevents collision when syncing across regional CEB/LECO subsystems.
 * **Telemetry Entity (`GenerationReading`)**:
   - **Type**: `BIGINT` (`BIGSERIAL`).
@@ -136,7 +136,7 @@ As the number of grid-connected solar installations grows across Sri Lanka, `gen
 
 ### ADR-08: High-Throughput Seeder Execution & Batch Buffer Architecture
 
-* **Challenge**: Inserting 134,400 time-series records (200 sites × 7 days × 96 readings/day) through an ORM in individual queries would take 30+ minutes and exhaust Node.js/PostgreSQL connection memory.
+* **Challenge**: Inserting 134,400 time-series records (200 sites × 7 days × 96 readings/day) through an ORM in individual queries would take 30+ minutes and exhaust Node.js connection memory.
 * **Solution**:
   - **Memory Chunking**: An in-memory buffer collects generated telemetry points and flushes in batches of `8,000` records via `GenerationReading.bulkCreate(buffer, { validate: false, ignoreDuplicates: true })`.
   - **Single Round-Trip Multi-Row Inserts**: Reduces database round-trips from 134,400 to ~17 batch transactions.
@@ -160,7 +160,7 @@ As the number of grid-connected solar installations grows across Sri Lanka, `gen
      - Eliminates the need for client frontend applications to perform 4–5 sequential round-trips to render a comprehensive installation overview screen.
   3. **Derived Operational Resource (`/last-reading`)**:
      - Rather than exposing generic `/readings?limit=1` table queries or polluting `SolarInstallation` with mutable last-reading columns, `/last-reading` is exposed as an explicit derived REST resource.
-     - Powered by PostgreSQL index-only scans on `(installation_id, timestamp DESC)`, achieving sub-millisecond operational reads.
+     - Powered by database index-only scans on `(installation_id, timestamp DESC)`, achieving sub-millisecond operational reads.
   4. **RFC 7231 Compliant Ingestion (`POST /installations/:id/readings`)**:
      - Returns HTTP status `201 Created`.
      - Injects a standard `Location: /installations/{id}/readings/{reading.id}` header.
@@ -235,7 +235,37 @@ As the number of grid-connected solar installations grows across Sri Lanka, `gen
      - Enforces standard HTTP Strict Transport Security (`Strict-Transport-Security: max-age=31536000; includeSubDomains`).
      - Mandates RFC 6750 `Authorization: Bearer <token>` header syntax, returning HTTP `401 Unauthorized` on missing or malformed authentication tokens.
 
+---
 
+### ADR-13: Standardized Global Error Contract & Live OpenAPI (Swagger UI) Architecture
 
-
-
+* **Context**: Enterprise monitoring platforms require deterministic, machine-parsable error responses to eliminate client parsing ambiguity. Furthermore, third-party developers, hardware device engineers, and regulatory evaluators require an interactive documentation console mounted directly on the service.
+* **Specification Decisions**:
+  1. **Strict 4-Field Standardized JSON Error Contract**:
+     - All API errors, whether originating from business validation, middleware rejections, or database driver failures, are normalized into:
+       ```json
+       {
+         "code": "STRING_ERROR_CODE",
+         "message": "Human-readable summary message.",
+         "detail": "Specific technical detail or parameter error.",
+         "timestamp": "ISO8601_TIMESTAMP"
+       }
+       ```
+     - Fields are guaranteed non-null, with `detail` carrying granular diagnostic context (e.g., parameter names, validation rules, or database table identifiers).
+  2. **Comprehensive HTTP Status Code Matrix**:
+     - `400 Bad Request` (`BAD_REQUEST`): Malformed syntax, invalid pagination integers, invalid UUID representations, or inverted time ranges.
+     - `401 Unauthorized` (`UNAUTHORIZED`): Missing or invalid JWT authentication credentials.
+     - `403 Forbidden` (`FORBIDDEN`): Device token scope violation or jurisdictional boundary violation.
+     - `404 Not Found` (`NOT_FOUND`): Target entity not found in the database.
+     - `406 Not Acceptable` (`NOT_ACCEPTABLE`): Content negotiation failure when client does not accept `application/json`.
+     - `412 Precondition Failed` (`PRECONDITION_FAILED`): Failure of `If-Match` or `If-Unmodified-Since` HTTP preconditions.
+     - `422 Validation Error` (`VALIDATION_ERROR`): Semantic validation failures and database constraint violations.
+  3. **Relational Database (MySQL / MariaDB / PostgreSQL) Exception Mapping**:
+     - **Foreign Key Violations** (MySQL `1451`/`1452`, `SequelizeForeignKeyConstraintError`): Mapped to HTTP `422` with code `"FOREIGN_KEY_VIOLATION"` and detailed table/field violation diagnostics.
+     - **Unique Constraint / Duplicate Keys** (MySQL `1062`, `SequelizeUniqueConstraintError`): Mapped to HTTP `409` with code `"DUPLICATE_KEY_ERROR"` indicating the conflicting attribute.
+     - **Database Timeouts & Network Partitions** (`ETIMEDOUT`, `ECONNREFUSED`, `PROTOCOL_CONNECTION_LOST`, `SequelizeConnectionTimedOutError`): Mapped to HTTP `503` with code `"DATABASE_CONNECTION_TIMEOUT"`.
+  4. **OpenAPI 3.0.3 Specification & Swagger UI (`/docs`)**:
+     - Mounted Swagger UI at `/docs` with title `'SLSEA Solar Generation Monitoring API Documentation'`.
+     - Raw OpenAPI specification available at `/docs/openapi.json` and `/api-docs.json`.
+     - Configured `BearerAuth` in `components/securitySchemes` using HTTP Bearer format (`JWT`), enabling interactive authentication testing for device writers and regional analysts.
+     - Fully specified 2xx success schemas, 4xx/5xx error contracts, tags, operation IDs, and parameter descriptions across all 11 endpoints.

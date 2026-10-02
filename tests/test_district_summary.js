@@ -65,7 +65,7 @@ async function testDistrictSummary() {
     try {
       await getDistrictSummary(req, res, () => {});
       assert(res.statusCode === 404, 'Non-existent district returns 404 Not Found');
-      assert(res.body.error === 'Not Found', 'Standardized JSON error message returned');
+      assert(res.body.code === 'NOT_FOUND', 'Standardized JSON error message returned');
     } finally {
       sequelize.query = origQuery;
     }

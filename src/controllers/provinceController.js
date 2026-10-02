@@ -43,8 +43,10 @@ async function getProvinceDistricts(req, res, next) {
 
     if (!province) {
       return res.status(404).json({
-        error: 'Not Found',
-        message: `Province with id '${id}' was not found.`,
+        code: 'NOT_FOUND',
+        message: 'The requested province was not found.',
+        detail: `Province with id '${id}' was not found.`,
+        timestamp: new Date().toISOString(),
       });
     }
 

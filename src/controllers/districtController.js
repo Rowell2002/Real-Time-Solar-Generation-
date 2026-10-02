@@ -31,8 +31,10 @@ async function getDistrictSubstations(req, res, next) {
 
     if (!district) {
       return res.status(404).json({
-        error: 'Not Found',
-        message: `District with id '${id}' was not found.`,
+        code: 'NOT_FOUND',
+        message: 'The requested district was not found.',
+        detail: `District with id '${id}' was not found.`,
+        timestamp: new Date().toISOString(),
       });
     }
 
@@ -122,8 +124,10 @@ async function getDistrictSummary(req, res, next) {
     // If query returns 0 rows, the district does not exist in the database
     if (!rows || rows.length === 0) {
       return res.status(404).json({
-        error: 'Not Found',
-        message: `District with id '${id}' was not found.`,
+        code: 'NOT_FOUND',
+        message: 'The requested district was not found.',
+        detail: `District with id '${id}' was not found.`,
+        timestamp: new Date().toISOString(),
       });
     }
 

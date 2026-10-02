@@ -5,7 +5,7 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-
 
 /**
  * Middleware generator to validate that specified route params are valid UUIDs.
- * Prevents PostgreSQL syntax errors from malformed UUID queries.
+ * Prevents database syntax errors and rejects malformed requests with 400 Bad Request.
  *
  * @param  {...string} paramNames - Route param names to validate (e.g. 'id', 'provinceId')
  * @returns {import('express').RequestHandler}
@@ -16,8 +16,10 @@ function validateUuid(...paramNames) {
       const value = req.params[param];
       if (value && !UUID_REGEX.test(value)) {
         return res.status(400).json({
-          error: 'Bad Request',
-          message: `Invalid UUID parameter '${param}': '${value}' is not a valid UUID.`,
+          code: 'BAD_REQUEST',
+          message: 'Invalid request parameter format.',
+          detail: `Parameter '${param}' must be a valid UUID format (received: '${value}').`,
+          timestamp: new Date().toISOString(),
         });
       }
     }

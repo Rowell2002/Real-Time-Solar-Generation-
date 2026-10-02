@@ -38,9 +38,10 @@ async function getInstallationReadings(req, res, next) {
       if (!acceptsJson) {
         res.setHeader('Content-Type', 'application/json; charset=utf-8');
         return res.status(406).json({
-          error: 'Not Acceptable',
-          message: "The requested media type is not supported. Only 'application/json' is served by this endpoint.",
-          supported_media_types: ['application/json'],
+          code: 'NOT_ACCEPTABLE',
+          message: 'Requested media type is not supported.',
+          detail: "The requested media type is not supported. Only 'application/json' is served by this endpoint.",
+          timestamp: new Date().toISOString(),
         });
       }
     }
@@ -80,8 +81,10 @@ async function getInstallationReadings(req, res, next) {
 
     if (!installation) {
       return res.status(404).json({
-        error: 'Not Found',
-        message: `SolarInstallation with id '${id}' was not found.`,
+        code: 'NOT_FOUND',
+        message: 'The requested solar installation was not found.',
+        detail: `SolarInstallation with id '${id}' was not found.`,
+        timestamp: new Date().toISOString(),
       });
     }
 
@@ -89,20 +92,26 @@ async function getInstallationReadings(req, res, next) {
     const { province_id, district_id, substation_id } = req.query;
     if (province_id && !UUID_REGEX.test(province_id)) {
       return res.status(400).json({
-        error: 'Bad Request',
-        message: `Invalid UUID format for 'province_id': '${province_id}'.`,
+        code: 'BAD_REQUEST',
+        message: 'Invalid query parameter format.',
+        detail: `Invalid UUID format for 'province_id': '${province_id}'.`,
+        timestamp: new Date().toISOString(),
       });
     }
     if (district_id && !UUID_REGEX.test(district_id)) {
       return res.status(400).json({
-        error: 'Bad Request',
-        message: `Invalid UUID format for 'district_id': '${district_id}'.`,
+        code: 'BAD_REQUEST',
+        message: 'Invalid query parameter format.',
+        detail: `Invalid UUID format for 'district_id': '${district_id}'.`,
+        timestamp: new Date().toISOString(),
       });
     }
     if (substation_id && !UUID_REGEX.test(substation_id)) {
       return res.status(400).json({
-        error: 'Bad Request',
-        message: `Invalid UUID format for 'substation_id': '${substation_id}'.`,
+        code: 'BAD_REQUEST',
+        message: 'Invalid query parameter format.',
+        detail: `Invalid UUID format for 'substation_id': '${substation_id}'.`,
+        timestamp: new Date().toISOString(),
       });
     }
 
@@ -126,15 +135,19 @@ async function getInstallationReadings(req, res, next) {
 
     if (isNaN(page) || page < 1) {
       return res.status(400).json({
-        error: 'Bad Request',
-        message: "Query parameter 'page' must be a positive integer greater than or equal to 1.",
+        code: 'BAD_REQUEST',
+        message: 'Invalid pagination parameter.',
+        detail: "Query parameter 'page' must be a positive integer greater than or equal to 1.",
+        timestamp: new Date().toISOString(),
       });
     }
 
     if (isNaN(limit) || limit < 1) {
       return res.status(400).json({
-        error: 'Bad Request',
-        message: "Query parameter 'limit' must be a positive integer between 1 and 200.",
+        code: 'BAD_REQUEST',
+        message: 'Invalid pagination parameter.',
+        detail: "Query parameter 'limit' must be a positive integer between 1 and 200.",
+        timestamp: new Date().toISOString(),
       });
     }
 
@@ -158,8 +171,10 @@ async function getInstallationReadings(req, res, next) {
       startDate = new Date(start_time);
       if (isNaN(startDate.getTime())) {
         return res.status(400).json({
-          error: 'Bad Request',
-          message: `Query parameter 'start_time' ('${start_time}') must be a valid ISO 8601 timestamp.`,
+          code: 'BAD_REQUEST',
+          message: 'Invalid timestamp format.',
+          detail: `Query parameter 'start_time' ('${start_time}') must be a valid ISO 8601 timestamp.`,
+          timestamp: new Date().toISOString(),
         });
       }
     }
@@ -168,16 +183,20 @@ async function getInstallationReadings(req, res, next) {
       endDate = new Date(end_time);
       if (isNaN(endDate.getTime())) {
         return res.status(400).json({
-          error: 'Bad Request',
-          message: `Query parameter 'end_time' ('${end_time}') must be a valid ISO 8601 timestamp.`,
+          code: 'BAD_REQUEST',
+          message: 'Invalid timestamp format.',
+          detail: `Query parameter 'end_time' ('${end_time}') must be a valid ISO 8601 timestamp.`,
+          timestamp: new Date().toISOString(),
         });
       }
     }
 
     if (startDate && endDate && startDate > endDate) {
       return res.status(400).json({
-        error: 'Bad Request',
-        message: "'start_time' cannot be chronologically later than 'end_time'.",
+        code: 'BAD_REQUEST',
+        message: 'Invalid time range.',
+        detail: "'start_time' cannot be chronologically later than 'end_time'.",
+        timestamp: new Date().toISOString(),
       });
     }
 
@@ -202,8 +221,10 @@ async function getInstallationReadings(req, res, next) {
         order = [['timestamp', 'DESC']];
       } else {
         return res.status(400).json({
-          error: 'Bad Request',
-          message: `Invalid sort field '${sortParam}'. Allowed values are 'timestamp' (ascending) or '-timestamp' (descending).`,
+          code: 'BAD_REQUEST',
+          message: 'Invalid sort parameter.',
+          detail: `Invalid sort field '${sortParam}'. Allowed values are 'timestamp' (ascending) or '-timestamp' (descending).`,
+          timestamp: new Date().toISOString(),
         });
       }
     }
@@ -268,8 +289,10 @@ async function getInstallationReadings(req, res, next) {
         .some((tag) => tag === '*' || tag === etagHeader || tag === `W/${etagHeader}`);
       if (!matches) {
         return res.status(412).json({
-          error: 'Precondition Failed',
-          message: "The condition specified in the 'If-Match' header evaluated to false.",
+          code: 'PRECONDITION_FAILED',
+          message: 'Precondition evaluation failed.',
+          detail: "The condition specified in the 'If-Match' header evaluated to false.",
+          timestamp: new Date().toISOString(),
         });
       }
     }
@@ -283,8 +306,10 @@ async function getInstallationReadings(req, res, next) {
         const ifUnmodSec = Math.floor(parsedUnmodified.getTime() / 1000);
         if (lastModSec > ifUnmodSec) {
           return res.status(412).json({
-            error: 'Precondition Failed',
-            message: "The condition specified in the 'If-Unmodified-Since' header evaluated to false.",
+            code: 'PRECONDITION_FAILED',
+            message: 'Precondition evaluation failed.',
+            detail: "The condition specified in the 'If-Unmodified-Since' header evaluated to false.",
+            timestamp: new Date().toISOString(),
           });
         }
       }
@@ -385,8 +410,10 @@ async function createReading(req, res, next) {
 
     if (!installation) {
       return res.status(404).json({
-        error: 'Not Found',
-        message: `SolarInstallation with id '${id}' was not found.`,
+        code: 'NOT_FOUND',
+        message: 'The requested solar installation was not found.',
+        detail: `SolarInstallation with id '${id}' was not found.`,
+        timestamp: new Date().toISOString(),
       });
     }
 
@@ -415,9 +442,10 @@ async function createReading(req, res, next) {
 
     if (errors.length > 0) {
       return res.status(400).json({
-        error: 'Bad Request',
+        code: 'BAD_REQUEST',
         message: 'Invalid reading payload.',
-        details: errors,
+        detail: errors.map((e) => `${e.field}: ${e.message}`).join('; '),
+        timestamp: new Date().toISOString(),
       });
     }
 
@@ -453,8 +481,10 @@ async function createReading(req, res, next) {
   } catch (error) {
     if (error.name === 'SequelizeUniqueConstraintError') {
       return res.status(409).json({
-        error: 'Conflict',
-        message: 'A telemetry reading with this exact timestamp already exists for this installation.',
+        code: 'DUPLICATE_KEY_ERROR',
+        message: 'Resource conflict: Duplicate reading entry.',
+        detail: 'A telemetry reading with this exact timestamp already exists for this installation.',
+        timestamp: new Date().toISOString(),
       });
     }
     next(error);
@@ -478,8 +508,10 @@ async function getReadingById(req, res, next) {
 
     if (!reading) {
       return res.status(404).json({
-        error: 'Not Found',
-        message: `Reading with id '${readingId}' for installation '${id}' was not found.`,
+        code: 'NOT_FOUND',
+        message: 'The requested reading was not found.',
+        detail: `Reading with id '${readingId}' for installation '${id}' was not found.`,
+        timestamp: new Date().toISOString(),
       });
     }
 
