@@ -6,13 +6,36 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## [Unreleased]
+## [0.8.0] - 2026-10-02
 
-### Planned / Upcoming
-- High-throughput batch telemetry ingestion endpoint (`POST /api/v1/telemetry/batch`).
-- Rate limiting and API quota enforcement per hardware meter device.
+### Enterprise Platform Fortification & Advanced Analytical APIs
 
-## [0.7.0] - 2026-10-02
+#### Added
+- **Authentication & Token Lifecycle Management Endpoints (`src/controllers/authController.js`, `src/routes/authRoutes.js`)**:
+  - `POST /auth/login`: Issues role-specific JWT Bearer tokens for SLSEA jurisdictional analysts (`national`, `provincial`, `district`) with embedded claims (`sub`, `email`, `role`, `scopes`, `jurisdiction_id`).
+  - `POST /auth/device-token`: Mints scoped hardware telemetry tokens (`installation:write:{installation_id}`) for verified solar meter hardware.
+  - `GET /auth/me`: Secure token introspection endpoint resolving authenticated principal identities and assigned permission scopes.
+- **High-Throughput Batch Telemetry Ingestion (`POST /installations/:id/readings/batch`)**:
+  - Ingests up to 500 generation telemetry records in a single payload.
+  - Strict individual record attribute validation (`power_kw`, `energy_kwh`, `voltage_v`, ISO 8601 `timestamp`).
+  - Idempotent in-flight deduplication against database unique constraints.
+  - Returns `201 Created` with batch ingestion statistics (`total_received`, `inserted_count`, `duplicate_skipped_count`, timestamp bounds) and HATEOAS navigability links.
+- **National Operational Solar Generation Summary (`GET /national/summary`)**:
+  - Upper-band national aggregation endpoint aggregating live solar generation across all 9 Sri Lankan provinces.
+  - Powered by an optimized single-query Common Table Expression (CTE) and `ROW_NUMBER() OVER (PARTITION BY ...)` window function.
+  - Delivers country-level rollups (`total_active_installations`, `current_total_power_kw`, `current_total_power_mw`, `today_total_energy_kwh`, `today_total_energy_mwh`) alongside a full provincial breakdown.
+  - Integrated SHA-256 ETag caching with HTTP `304 Not Modified` conditional response.
+  - Enforces strict jurisdictional isolation: accessible exclusively by `national` role analysts (provincial and district analysts rejected with `403 Forbidden`).
+- **Sliding-Window Rate Limiting Middleware (`src/middleware/rateLimiter.js`)**:
+  - Configurable in-memory sliding-window rate limiter enforcing API quotas (default 300 req / 15 min for public endpoints; isolated buckets for write paths).
+  - Emits standard RFC 6585 headers: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, and `Retry-After`.
+  - Rejects quota violations with HTTP `429 Too Many Requests` matching the SLSEA 4-property JSON error contract.
+- **Deep Database Readiness Probe (`GET /health/ready`)**:
+  - Probes live database connectivity (`sequelize.authenticate()`), records roundtrip connection latency in milliseconds, reports SQL dialect, and returns HTTP 200 `ready` or HTTP 503 `degraded`.
+- **OpenAPI 3.0 Specification Updates (`src/docs/openapi.json`)**:
+  - Documented all new endpoints with request/response schemas, security tags, parameter specifications, and sample payloads.
+- **Automated Verification Test Suite (`tests/test_advanced_features.js`)**:
+  - 53 passing automated test assertions verifying health probes, authentication, batch ingestion, cross-installation authorization rejection, national aggregation, ETag conditional caching, and rate limiting.
 
 ### Global Exception Handler & Live OpenAPI (Swagger UI) Specification
 

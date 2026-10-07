@@ -12,6 +12,7 @@ const STATUS_CODE_MAP = {
   409: { code: 'CONFLICT', message: 'Conflict: A resource with these unique attributes already exists.' },
   412: { code: 'PRECONDITION_FAILED', message: 'Precondition Failed: The condition specified in request headers evaluated to false.' },
   422: { code: 'VALIDATION_ERROR', message: 'Validation Error: Semantic validation of request attributes failed.' },
+  429: { code: 'TOO_MANY_REQUESTS', message: 'Too Many Requests: Rate limit quota exceeded. Please slow down.' },
   500: { code: 'INTERNAL_SERVER_ERROR', message: 'Internal Server Error: An unexpected server error occurred.' },
   503: { code: 'SERVICE_UNAVAILABLE', message: 'Service Unavailable: The database or downstream service is temporarily unavailable.' },
 };

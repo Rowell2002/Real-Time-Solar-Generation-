@@ -3,11 +3,12 @@
 const express = require('express');
 const router = express.Router();
 const { getCompositeInstallation, getLastReading } = require('../controllers/installationController');
-const { createReading, getReadingById, getInstallationReadings } = require('../controllers/readingController');
+const { createReading, createReadingsBatch, getReadingById, getInstallationReadings } = require('../controllers/readingController');
 const { validateUuid } = require('../middleware/validateUuid');
 const authenticateJwt = require('../middleware/authenticateJwt');
 const authorizeDeviceWrite = require('../middleware/authorizeDeviceWrite');
 const authorizeJurisdiction = require('../middleware/authorizeJurisdiction');
+const { ingestLimiter } = require('../middleware/rateLimiter');
 
 // 2. Composite Resource: GET /installations/:id/composite
 router.get(
@@ -34,7 +35,18 @@ router.post(
   validateUuid('id'),
   authenticateJwt,
   authorizeDeviceWrite,
+  ingestLimiter,
   createReading
+);
+
+// 4b. High-Throughput Batch Telemetry Ingestion: POST /installations/:id/readings/batch
+router.post(
+  '/:id/readings/batch',
+  validateUuid('id'),
+  authenticateJwt,
+  authorizeDeviceWrite,
+  ingestLimiter,
+  createReadingsBatch
 );
 
 // 5. Analytical Historical Readings: GET /installations/:id/readings

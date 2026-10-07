@@ -2,8 +2,8 @@
   "openapi": "3.0.3",
   "info": {
     "title": "SLSEA Solar Generation Monitoring API",
-    "version": "1.0.0",
-    "description": "Sri Lanka Sustainable Energy Authority (SLSEA) Real-Time Solar Generation Monitoring & Telemetry Processing REST API.\n\nProvides real-time IoT device telemetry ingestion, administrative hierarchy navigation, operational analytics, district-level aggregation dashboards, conditional caching (ETag/304), and fine-grained Role-Based Access Control (RBAC) with Write-Read security isolation.",
+    "version": "1.1.0",
+    "description": "Sri Lanka Sustainable Energy Authority (SLSEA) Real-Time Solar Generation Monitoring & Telemetry Processing REST API.\n\nProvides real-time IoT device telemetry ingestion, batch historical sync, administrative hierarchy navigation, operational analytics, district and national-level aggregation dashboards, conditional caching (ETag/304), rate-limiting protection, and fine-grained Role-Based Access Control (RBAC) with Write-Read security isolation.",
     "contact": {
       "name": "SLSEA Technical Architecture Team",
       "email": "api-support@slsea.gov.lk"
@@ -21,8 +21,12 @@
   ],
   "tags": [
     {
+      "name": "Authentication",
+      "description": "JWT Bearer token acquisition for analysts, administrators, and hardware IoT meters"
+    },
+    {
       "name": "System",
-      "description": "System operational status and health check endpoints"
+      "description": "System operational status, health probes, and database readiness"
     },
     {
       "name": "Hierarchy Navigation",
@@ -34,11 +38,15 @@
     },
     {
       "name": "Telemetry & Ingestion",
-      "description": "Device telemetry ingestion write path and analytical historical readings query engine"
+      "description": "Device telemetry ingestion write path (single & high-throughput batch) and analytical historical query engine"
     },
     {
       "name": "District Analytics",
-      "description": "High-performance operational summaries and aggregation dashboards"
+      "description": "High-performance operational summaries and aggregation dashboards at district level"
+    },
+    {
+      "name": "National Analytics",
+      "description": "Island-wide operational solar dashboard for CEB/SLSEA national command center"
     }
   ],
   "components": {
@@ -88,6 +96,72 @@
           "service": { "type": "string", "example": "SLSEA Solar Generation Tracking API" }
         }
       },
+      "ReadinessResponse": {
+        "type": "object",
+        "required": ["status", "database", "dialect", "latency_ms", "timestamp", "service"],
+        "properties": {
+          "status": { "type": "string", "example": "ready" },
+          "database": { "type": "string", "example": "connected" },
+          "dialect": { "type": "string", "example": "postgres" },
+          "latency_ms": { "type": "number", "example": 2.5 },
+          "timestamp": { "type": "string", "format": "date-time" },
+          "service": { "type": "string", "example": "SLSEA Solar Generation Tracking API" }
+        }
+      },
+      "LoginPayload": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": { "type": "string", "format": "email", "example": "national.admin@slsea.gov.lk" },
+          "password": { "type": "string", "example": "Password123!" }
+        }
+      },
+      "LoginSuccessResponse": {
+        "type": "object",
+        "required": ["message", "token", "token_type", "expires_in", "user"],
+        "properties": {
+          "message": { "type": "string", "example": "Authentication successful." },
+          "token": { "type": "string", "example": "eyJhbGciOiJIUzI1NiIsIn..." },
+          "token_type": { "type": "string", "example": "Bearer" },
+          "expires_in": { "type": "string", "example": "24h" },
+          "user": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string", "format": "uuid" },
+              "email": { "type": "string" },
+              "role": { "type": "string", "enum": ["national", "provincial", "district"] },
+              "jurisdiction_id": { "type": "string", "nullable": true, "format": "uuid" },
+              "scopes": { "type": "array", "items": { "type": "string" }, "example": ["read:national"] }
+            }
+          }
+        }
+      },
+      "DeviceTokenPayload": {
+        "type": "object",
+        "properties": {
+          "installation_id": { "type": "string", "format": "uuid", "example": "018f4a12-7b32-7c80-87a1-f0a801234567" },
+          "meter_id": { "type": "string", "example": "MTR-WP-COL-001" }
+        }
+      },
+      "DeviceTokenSuccessResponse": {
+        "type": "object",
+        "required": ["message", "token", "token_type", "expires_in", "device"],
+        "properties": {
+          "message": { "type": "string", "example": "Device write token issued successfully." },
+          "token": { "type": "string", "example": "eyJhbGciOiJIUzI1NiIsIn..." },
+          "token_type": { "type": "string", "example": "Bearer" },
+          "expires_in": { "type": "string", "example": "24h" },
+          "device": {
+            "type": "object",
+            "properties": {
+              "installation_id": { "type": "string", "format": "uuid" },
+              "meter_id": { "type": "string" },
+              "scope": { "type": "string", "example": "installation:write:018f4a12-7b32-7c80-87a1-f0a801234567" },
+              "scopes": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        }
+      },
       "Province": {
         "type": "object",
         "required": ["id", "name", "code"],
@@ -129,7 +203,7 @@
           "id": { "type": "string", "format": "uuid", "example": "018f4a12-7b32-7c80-87a1-f0a801234567" },
           "name": { "type": "string", "example": "Colombo Port Commercial Solar Array 1" },
           "capacity_kw": { "type": "number", "format": "float", "example": 250.0 },
-          "installation_type": { "type": "string", "enum": ["rooftop", "ground_mounted", "floating"], "example": "rooftop" },
+          "installation_type": { "type": "string", "enum": ["rooftop", "ground_mounted", "floating", "agrivoltaic"], "example": "rooftop" },
           "meter_id": { "type": "string", "example": "MTR-WP-COL-001" },
           "grid_substation_id": { "type": "string", "format": "uuid" },
           "createdAt": { "type": "string", "format": "date-time" },
@@ -208,29 +282,47 @@
         "type": "object",
         "required": ["timestamp", "power_kw", "energy_kwh", "voltage_v"],
         "properties": {
-          "timestamp": {
-            "type": "string",
-            "format": "date-time",
-            "example": "2026-10-02T04:15:00.000Z",
-            "description": "ISO 8601 timestamp of generation reading"
+          "timestamp": { "type": "string", "format": "date-time", "example": "2026-10-02T04:15:00.000Z" },
+          "power_kw": { "type": "number", "minimum": 0, "example": 145.25 },
+          "energy_kwh": { "type": "number", "minimum": 0, "example": 1250.75 },
+          "voltage_v": { "type": "number", "minimum": 0, "example": 230.5 }
+        }
+      },
+      "BatchReadingsPayload": {
+        "type": "object",
+        "required": ["readings"],
+        "properties": {
+          "readings": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/ReadingIngestPayload" },
+            "description": "Array of telemetry readings (up to 500 records per batch)"
+          }
+        }
+      },
+      "BatchReadingsSuccessResponse": {
+        "type": "object",
+        "required": ["message", "data", "_links"],
+        "properties": {
+          "message": { "type": "string", "example": "Batch telemetry readings processed successfully." },
+          "data": {
+            "type": "object",
+            "properties": {
+              "installation_id": { "type": "string", "format": "uuid" },
+              "meter_id": { "type": "string", "example": "MTR-WP-COL-001" },
+              "total_received": { "type": "integer", "example": 96 },
+              "inserted_count": { "type": "integer", "example": 96 },
+              "duplicate_skipped_count": { "type": "integer", "example": 0 },
+              "first_timestamp": { "type": "string", "format": "date-time" },
+              "last_timestamp": { "type": "string", "format": "date-time" }
+            }
           },
-          "power_kw": {
-            "type": "number",
-            "minimum": 0,
-            "example": 145.25,
-            "description": "Instantaneous power output in kilowatts (kW)"
-          },
-          "energy_kwh": {
-            "type": "number",
-            "minimum": 0,
-            "example": 1250.75,
-            "description": "Cumulative energy generation recorded by meter in kilowatt-hours (kWh)"
-          },
-          "voltage_v": {
-            "type": "number",
-            "minimum": 0,
-            "example": 230.5,
-            "description": "Grid interconnection voltage in volts (V)"
+          "_links": {
+            "type": "object",
+            "properties": {
+              "self": { "type": "object", "properties": { "href": { "type": "string" } } },
+              "readings": { "type": "object", "properties": { "href": { "type": "string" } } },
+              "last_reading": { "type": "object", "properties": { "href": { "type": "string" } } }
+            }
           }
         }
       },
@@ -264,9 +356,9 @@
         "type": "object",
         "required": ["total_count", "page", "limit", "data", "links"],
         "properties": {
-          "total_count": { "type": "integer", "example": 672, "description": "Total matching telemetry records in the dataset" },
-          "page": { "type": "integer", "example": 1, "description": "Current page number" },
-          "limit": { "type": "integer", "example": 50, "description": "Page record limit" },
+          "total_count": { "type": "integer", "example": 672 },
+          "page": { "type": "integer", "example": 1 },
+          "limit": { "type": "integer", "example": 50 },
           "data": {
             "type": "array",
             "items": {
@@ -285,8 +377,8 @@
             "type": "object",
             "required": ["self"],
             "properties": {
-              "self": { "type": "string", "example": "/installations/018f4a12-7b32-7c80-87a1-f0a801234567/readings?page=1&limit=50" },
-              "next": { "type": "string", "nullable": true, "example": "/installations/018f4a12-7b32-7c80-87a1-f0a801234567/readings?page=2&limit=50" },
+              "self": { "type": "string" },
+              "next": { "type": "string", "nullable": true },
               "prev": { "type": "string", "nullable": true }
             }
           }
@@ -296,7 +388,7 @@
         "type": "object",
         "required": ["district_id", "district_name", "total_active_installations", "current_total_power_kw", "today_total_energy_kwh", "substation_breakdown"],
         "properties": {
-          "district_id": { "type": "string", "format": "uuid", "example": "018f4a12-7b32-7c80-87a1-d0a801234567" },
+          "district_id": { "type": "string", "format": "uuid" },
           "district_name": { "type": "string", "example": "Colombo" },
           "total_active_installations": { "type": "integer", "example": 24 },
           "current_total_power_kw": { "type": "number", "example": 4210.8 },
@@ -315,24 +407,131 @@
             }
           }
         }
+      },
+      "NationalSummary": {
+        "type": "object",
+        "required": ["country", "total_provinces", "total_active_installations", "current_total_power_kw", "current_total_power_mw", "today_total_energy_kwh", "today_total_energy_mwh", "provinces_breakdown"],
+        "properties": {
+          "country": { "type": "string", "example": "Sri Lanka" },
+          "total_provinces": { "type": "integer", "example": 9 },
+          "total_active_installations": { "type": "integer", "example": 200 },
+          "current_total_power_kw": { "type": "number", "example": 38450.25 },
+          "current_total_power_mw": { "type": "number", "example": 38.45 },
+          "today_total_energy_kwh": { "type": "number", "example": 164210.5 },
+          "today_total_energy_mwh": { "type": "number", "example": 164.21 },
+          "provinces_breakdown": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "province_id": { "type": "string", "format": "uuid" },
+                "province_name": { "type": "string", "example": "Western" },
+                "province_code": { "type": "string", "example": "WP" },
+                "active_installations_count": { "type": "integer", "example": 48 },
+                "current_total_power_kw": { "type": "number", "example": 9840.5 },
+                "current_total_power_mw": { "type": "number", "example": 9.84 },
+                "today_total_energy_kwh": { "type": "number", "example": 42100.25 }
+              }
+            }
+          },
+          "computed_at": { "type": "string", "format": "date-time" }
+        }
       }
     }
   },
   "paths": {
+    "/auth/login": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "User Login & JWT Bearer Token Issuance",
+        "description": "Authenticates analyst/official credentials and issues role-scoped JWT token ('national', 'provincial', 'district').",
+        "operationId": "loginUser",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/LoginPayload" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful. JWT token issued.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LoginSuccessResponse" } } }
+          },
+          "400": { "description": "Missing email or password.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "401": { "description": "Invalid credentials.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      }
+    },
+    "/auth/device-token": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Issue Metering Device Ingestion Token",
+        "description": "Generates a scoped device write token ('installation:write:{id}') for an IoT smart solar meter.",
+        "operationId": "issueDeviceToken",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/DeviceTokenPayload" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Device token generated.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DeviceTokenSuccessResponse" } } }
+          },
+          "400": { "description": "Missing installation_id or meter_id.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "404": { "description": "Solar installation not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "tags": ["Authentication"],
+        "summary": "Inspect Current Token Principal Claims",
+        "description": "Returns decoded token payload, roles, scopes, and expiration of the authenticated client.",
+        "operationId": "getMe",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Decoded principal returned.",
+            "content": { "application/json": { "schema": { "type": "object" } } }
+          },
+          "401": { "description": "Authentication required.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      }
+    },
     "/health": {
       "get": {
         "tags": ["System"],
-        "summary": "API Service Health Check",
+        "summary": "API Service Liveness Probe",
         "description": "Returns current operational status, uptime timestamp, and service identifier.",
         "operationId": "getHealth",
         "responses": {
           "200": {
-            "description": "Service is healthy and ready to accept traffic.",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/HealthResponse" }
-              }
-            }
+            "description": "Service is healthy and process is running.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/HealthResponse" } } }
+          }
+        }
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "tags": ["System"],
+        "summary": "Deep Database Readiness Probe",
+        "description": "Verifies active database cluster connectivity, measures query roundtrip latency, and confirms dialect.",
+        "operationId": "getHealthReady",
+        "responses": {
+          "200": {
+            "description": "Database is connected and ready to accept traffic.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ReadinessResponse" } } }
+          },
+          "503": {
+            "description": "Database connection unavailable or timed out.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
           }
         }
       }
@@ -359,14 +558,7 @@
               }
             }
           },
-          "401": {
-            "description": "Authentication token missing or invalid.",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
-              }
-            }
-          }
+          "401": { "description": "Authentication token missing or invalid.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
         }
       }
     },
@@ -378,47 +570,28 @@
         "operationId": "getProvinceDistricts",
         "security": [{ "BearerAuth": [] }],
         "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "description": "Province UUID",
-            "schema": { "type": "string", "format": "uuid" },
-            "example": "018f4a12-7b32-7c80-87a1-c0a801234567"
-          }
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
         ],
         "responses": {
           "200": {
-            "description": "Districts in province returned successfully.",
+            "description": "Districts in province returned.",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
                   "properties": {
                     "province": { "$ref": "#/components/schemas/Province" },
-                    "count": { "type": "integer", "example": 3 },
+                    "count": { "type": "integer" },
                     "data": { "type": "array", "items": { "$ref": "#/components/schemas/District" } }
                   }
                 }
               }
             }
           },
-          "400": {
-            "description": "Invalid UUID format supplied in path parameter.",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
-          },
-          "401": {
-            "description": "Authentication token missing or invalid.",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
-          },
-          "403": {
-            "description": "Forbidden: User jurisdiction restricts access to this province.",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
-          },
-          "404": {
-            "description": "Province not found.",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
-          }
+          "400": { "description": "Invalid UUID parameter.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "401": { "description": "Unauthorized.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "403": { "description": "Forbidden: User jurisdiction restricts access to this province.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "404": { "description": "Province not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
         }
       }
     },
@@ -430,47 +603,28 @@
         "operationId": "getDistrictSubstations",
         "security": [{ "BearerAuth": [] }],
         "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "description": "District UUID",
-            "schema": { "type": "string", "format": "uuid" },
-            "example": "018f4a12-7b32-7c80-87a1-d0a801234567"
-          }
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
         ],
         "responses": {
           "200": {
-            "description": "Grid substations in district returned successfully.",
+            "description": "Grid substations in district returned.",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
                   "properties": {
                     "district": { "$ref": "#/components/schemas/District" },
-                    "count": { "type": "integer", "example": 2 },
+                    "count": { "type": "integer" },
                     "data": { "type": "array", "items": { "$ref": "#/components/schemas/GridSubstation" } }
                   }
                 }
               }
             }
           },
-          "400": {
-            "description": "Invalid UUID format supplied in path parameter.",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
-          },
-          "401": {
-            "description": "Authentication token missing or invalid.",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
-          },
-          "403": {
-            "description": "Forbidden: User jurisdiction restricts access to this district.",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
-          },
-          "404": {
-            "description": "District not found.",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
-          }
+          "400": { "description": "Invalid UUID.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "401": { "description": "Unauthorized.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "403": { "description": "Forbidden.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "404": { "description": "District not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
         }
       }
     },
@@ -482,46 +636,28 @@
         "operationId": "getSubstationInstallations",
         "security": [{ "BearerAuth": [] }],
         "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "description": "Grid Substation UUID",
-            "schema": { "type": "string", "format": "uuid" }
-          }
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
         ],
         "responses": {
           "200": {
-            "description": "Installations under substation returned successfully.",
+            "description": "Installations returned.",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
                   "properties": {
                     "substation": { "$ref": "#/components/schemas/GridSubstation" },
-                    "count": { "type": "integer", "example": 12 },
+                    "count": { "type": "integer" },
                     "data": { "type": "array", "items": { "$ref": "#/components/schemas/SolarInstallation" } }
                   }
                 }
               }
             }
           },
-          "400": {
-            "description": "Invalid UUID format.",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
-          },
-          "401": {
-            "description": "Authentication credentials required.",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
-          },
-          "403": {
-            "description": "Forbidden: User jurisdiction restricts access to this substation.",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
-          },
-          "404": {
-            "description": "Substation not found.",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
-          }
+          "400": { "description": "Invalid UUID.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "401": { "description": "Unauthorized.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "403": { "description": "Forbidden.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "404": { "description": "Substation not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
         }
       }
     },
@@ -533,35 +669,17 @@
         "operationId": "getCompositeInstallation",
         "security": [{ "BearerAuth": [] }],
         "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "description": "Solar Installation UUID",
-            "schema": { "type": "string", "format": "uuid" }
-          }
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
         ],
         "responses": {
           "200": {
             "description": "Composite installation resource returned.",
             "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CompositeInstallation" } } }
           },
-          "400": {
-            "description": "Invalid UUID format in path.",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
-          },
-          "401": {
-            "description": "Authentication token missing or expired.",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
-          },
-          "403": {
-            "description": "Forbidden: User jurisdiction restricts access to this installation.",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
-          },
-          "404": {
-            "description": "Installation not found.",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
-          }
+          "400": { "description": "Invalid UUID.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "401": { "description": "Unauthorized.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "403": { "description": "Forbidden.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "404": { "description": "Installation not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
         }
       }
     },
@@ -573,35 +691,17 @@
         "operationId": "getLastReading",
         "security": [{ "BearerAuth": [] }],
         "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "description": "Solar Installation UUID",
-            "schema": { "type": "string", "format": "uuid" }
-          }
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
         ],
         "responses": {
           "200": {
             "description": "Latest telemetry reading returned.",
             "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LastReading" } } }
           },
-          "400": {
-            "description": "Invalid UUID parameter.",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
-          },
-          "401": {
-            "description": "Authentication token required.",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
-          },
-          "403": {
-            "description": "Forbidden.",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
-          },
-          "404": {
-            "description": "Installation or telemetry readings not found.",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
-          }
+          "400": { "description": "Invalid UUID.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "401": { "description": "Unauthorized.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "403": { "description": "Forbidden.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "404": { "description": "Reading not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
         }
       }
     },
@@ -613,189 +713,94 @@
         "operationId": "createReading",
         "security": [{ "BearerAuth": [] }],
         "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "description": "Target Solar Installation UUID",
-            "schema": { "type": "string", "format": "uuid" }
-          }
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
         ],
         "requestBody": {
           "required": true,
-          "description": "Instantaneous power and cumulative energy telemetry reading",
-          "content": {
-            "application/json": {
-              "schema": { "$ref": "#/components/schemas/ReadingIngestPayload" }
-            }
-          }
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ReadingIngestPayload" } } }
         },
         "responses": {
           "201": {
             "description": "Reading successfully recorded.",
-            "headers": {
-              "Location": {
-                "schema": { "type": "string" },
-                "description": "URI of the newly created reading resource (/installations/{id}/readings/{reading_id})"
-              }
-            },
+            "headers": { "Location": { "schema": { "type": "string" } } },
             "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ReadingIngestSuccess" } } }
           },
-          "400": {
-            "description": "Invalid payload format, negative numbers, or invalid timestamp.",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
-          },
-          "401": {
-            "description": "Device authentication required.",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
-          },
-          "403": {
-            "description": "Forbidden: Device token not authorized for this specific installation.",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
-          },
-          "404": {
-            "description": "Target solar installation does not exist.",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
-          },
-          "409": {
-            "description": "Conflict: Telemetry reading with this exact timestamp already recorded for this installation.",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
-          },
-          "422": {
-            "description": "Validation error or foreign key violation.",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
-          }
+          "400": { "description": "Bad Request.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "401": { "description": "Device authentication required.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "403": { "description": "Forbidden: Device not authorized for this installation.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "404": { "description": "Target solar installation not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "409": { "description": "Conflict: Duplicate timestamp.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "422": { "description": "Validation error.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
         }
       },
       "get": {
         "tags": ["Telemetry & Ingestion"],
         "summary": "Analytical Historical Readings Query Engine",
-        "description": "Retrieves paginated historical telemetry with multi-dimensional filtering (time window, province, district, substation), sorting, HATEOAS links, SHA-256 ETag caching, 304 conditional GET, 412 precondition verification, and 406 content negotiation.",
+        "description": "Retrieves paginated historical telemetry with multi-dimensional filtering, sorting, HATEOAS links, SHA-256 ETag caching, 304 conditional GET, 412 precondition verification, and 406 content negotiation.",
         "operationId": "getInstallationReadings",
         "security": [{ "BearerAuth": [] }],
         "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "description": "Solar Installation UUID",
-            "schema": { "type": "string", "format": "uuid" }
-          },
-          {
-            "name": "page",
-            "in": "query",
-            "required": false,
-            "description": "Page number (defaults to 1)",
-            "schema": { "type": "integer", "default": 1, "minimum": 1 }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "description": "Records per page (defaults to 50, maximum 200)",
-            "schema": { "type": "integer", "default": 50, "minimum": 1, "maximum": 200 }
-          },
-          {
-            "name": "sort",
-            "in": "query",
-            "required": false,
-            "description": "Sort order by timestamp: 'timestamp' (ascending) or '-timestamp' (descending)",
-            "schema": { "type": "string", "enum": ["timestamp", "-timestamp"], "default": "-timestamp" }
-          },
-          {
-            "name": "start_time",
-            "in": "query",
-            "required": false,
-            "description": "Filter readings on or after this ISO 8601 timestamp",
-            "schema": { "type": "string", "format": "date-time" }
-          },
-          {
-            "name": "end_time",
-            "in": "query",
-            "required": false,
-            "description": "Filter readings on or before this ISO 8601 timestamp",
-            "schema": { "type": "string", "format": "date-time" }
-          },
-          {
-            "name": "province_id",
-            "in": "query",
-            "required": false,
-            "description": "Filter by administrative province UUID scope",
-            "schema": { "type": "string", "format": "uuid" }
-          },
-          {
-            "name": "district_id",
-            "in": "query",
-            "required": false,
-            "description": "Filter by administrative district UUID scope",
-            "schema": { "type": "string", "format": "uuid" }
-          },
-          {
-            "name": "substation_id",
-            "in": "query",
-            "required": false,
-            "description": "Filter by grid substation UUID scope",
-            "schema": { "type": "string", "format": "uuid" }
-          },
-          {
-            "name": "If-None-Match",
-            "in": "header",
-            "required": false,
-            "description": "SHA-256 ETag for conditional GET validation",
-            "schema": { "type": "string" }
-          },
-          {
-            "name": "If-Match",
-            "in": "header",
-            "required": false,
-            "description": "Precondition ETag matching header",
-            "schema": { "type": "string" }
-          },
-          {
-            "name": "Accept",
-            "in": "header",
-            "required": false,
-            "description": "Requested media format (must accept 'application/json')",
-            "schema": { "type": "string", "default": "application/json" }
-          }
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 50, "maximum": 200 } },
+          { "name": "sort", "in": "query", "schema": { "type": "string", "enum": ["timestamp", "-timestamp"], "default": "-timestamp" } },
+          { "name": "start_time", "in": "query", "schema": { "type": "string", "format": "date-time" } },
+          { "name": "end_time", "in": "query", "schema": { "type": "string", "format": "date-time" } },
+          { "name": "province_id", "in": "query", "schema": { "type": "string", "format": "uuid" } },
+          { "name": "district_id", "in": "query", "schema": { "type": "string", "format": "uuid" } },
+          { "name": "substation_id", "in": "query", "schema": { "type": "string", "format": "uuid" } },
+          { "name": "If-None-Match", "in": "header", "schema": { "type": "string" } },
+          { "name": "If-Match", "in": "header", "schema": { "type": "string" } },
+          { "name": "Accept", "in": "header", "schema": { "type": "string", "default": "application/json" } }
         ],
         "responses": {
           "200": {
-            "description": "Paginated telemetry envelope returned successfully.",
+            "description": "Paginated telemetry envelope returned.",
             "headers": {
-              "ETag": { "schema": { "type": "string" }, "description": "SHA-256 entity tag of dataset" },
-              "Last-Modified": { "schema": { "type": "string" }, "description": "HTTP date of newest record in page" },
-              "Cache-Control": { "schema": { "type": "string" }, "example": "public, max-age=60, must-revalidate" }
+              "ETag": { "schema": { "type": "string" } },
+              "Last-Modified": { "schema": { "type": "string" } },
+              "Cache-Control": { "schema": { "type": "string" } }
             },
             "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PaginatedReadingsEnvelope" } } }
           },
-          "304": {
-            "description": "Not Modified: ETag or If-Modified-Since evaluated to true. Cached client copy is fresh."
-          },
-          "400": {
-            "description": "Bad Request: Malformed UUID, page/limit out of bounds, invalid sort parameter, or chronological mismatch.",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
-          },
-          "401": {
-            "description": "Authentication credentials required.",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
-          },
-          "403": {
-            "description": "Forbidden: User jurisdictional scope excludes this installation.",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
-          },
-          "404": {
-            "description": "Installation not found.",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
-          },
-          "406": {
-            "description": "Not Acceptable: Client requested unsupported media type (Accept header does not match application/json).",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
-          },
-          "412": {
-            "description": "Precondition Failed: If-Match or If-Unmodified-Since precondition evaluated to false.",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
+          "304": { "description": "Not Modified." },
+          "400": { "description": "Bad Request.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "401": { "description": "Unauthorized.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "403": { "description": "Forbidden.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "404": { "description": "Installation not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "406": { "description": "Not Acceptable.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "412": { "description": "Precondition Failed.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      }
+    },
+    "/installations/{id}/readings/batch": {
+      "post": {
+        "tags": ["Telemetry & Ingestion"],
+        "summary": "High-Throughput Batch Telemetry Ingestion",
+        "description": "Uploads an array of buffered telemetry readings (up to 500 readings per request). Transactionally validates, deduplicates, and bulk-inserts readings into the time-series store.",
+        "operationId": "createReadingsBatch",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/BatchReadingsPayload" }
+            }
           }
+        },
+        "responses": {
+          "201": {
+            "description": "Batch readings successfully processed.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/BatchReadingsSuccessResponse" } } }
+          },
+          "400": { "description": "Invalid batch payload.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "401": { "description": "Unauthorized.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "403": { "description": "Forbidden.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "404": { "description": "Installation not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "422": { "description": "Validation error in batch items.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
         }
       }
     },
@@ -813,43 +818,12 @@
         "responses": {
           "200": {
             "description": "Reading retrieved successfully.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "type": "object",
-                      "properties": {
-                        "id": { "type": "string", "format": "uuid" },
-                        "installation_id": { "type": "string", "format": "uuid" },
-                        "timestamp": { "type": "string", "format": "date-time" },
-                        "power_kw": { "type": "number" },
-                        "energy_kwh": { "type": "number" },
-                        "voltage_v": { "type": "number" }
-                      }
-                    }
-                  }
-                }
-              }
-            }
+            "content": { "application/json": { "schema": { "type": "object" } } }
           },
-          "400": {
-            "description": "Invalid UUID parameter.",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
-          },
-          "401": {
-            "description": "Authentication credentials required.",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
-          },
-          "403": {
-            "description": "Forbidden.",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
-          },
-          "404": {
-            "description": "Reading or installation not found.",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
-          }
+          "400": { "description": "Invalid UUID.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "401": { "description": "Unauthorized.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "403": { "description": "Forbidden.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "404": { "description": "Reading not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
         }
       }
     },
@@ -857,53 +831,52 @@
       "get": {
         "tags": ["District Analytics"],
         "summary": "District Aggregated Telemetry Dashboard Summary",
-        "description": "High-performance operational resource computing real-time instantaneous power (kW), cumulative energy produced today (kWh), active installation count, and grid substation breakdown using a single optimized MySQL query with Common Table Expressions (CTEs) and ROW_NUMBER() window functions.",
+        "description": "High-performance operational resource computing real-time instantaneous power (kW), cumulative energy produced today (kWh), active installation count, and grid substation breakdown using a single optimized MySQL query with CTEs and ROW_NUMBER() window functions.",
         "operationId": "getDistrictSummary",
         "security": [{ "BearerAuth": [] }],
         "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "description": "Administrative District UUID",
-            "schema": { "type": "string", "format": "uuid" }
-          },
-          {
-            "name": "If-None-Match",
-            "in": "header",
-            "required": false,
-            "description": "ETag for conditional 304 caching",
-            "schema": { "type": "string" }
-          }
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+          { "name": "If-None-Match", "in": "header", "schema": { "type": "string" } }
         ],
         "responses": {
           "200": {
             "description": "District aggregate summary calculated successfully.",
             "headers": {
-              "ETag": { "schema": { "type": "string" }, "description": "SHA-256 ETag representing district telemetry state" },
-              "Cache-Control": { "schema": { "type": "string" }, "example": "public, max-age=30, must-revalidate" }
+              "ETag": { "schema": { "type": "string" } },
+              "Cache-Control": { "schema": { "type": "string" } }
             },
             "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DistrictSummary" } } }
           },
-          "304": {
-            "description": "Not Modified: ETag matches. Cached summary is valid."
+          "304": { "description": "Not Modified." },
+          "400": { "description": "Invalid District UUID.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "401": { "description": "Unauthorized.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "403": { "description": "Forbidden.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "404": { "description": "District not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      }
+    },
+    "/national/summary": {
+      "get": {
+        "tags": ["National Analytics"],
+        "summary": "National Operational Solar Generation Dashboard",
+        "description": "Island-wide operational summary computing national instantaneous power (kW & MW), total energy generated today (kWh & MWh), active installation count across all 9 provinces in a single optimized query with CTEs and window functions.",
+        "operationId": "getNationalSummary",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "If-None-Match", "in": "header", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "National solar generation summary returned.",
+            "headers": {
+              "ETag": { "schema": { "type": "string" } },
+              "Cache-Control": { "schema": { "type": "string" } }
+            },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/NationalSummary" } } }
           },
-          "400": {
-            "description": "Invalid District UUID parameter.",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
-          },
-          "401": {
-            "description": "Authentication token missing or invalid.",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
-          },
-          "403": {
-            "description": "Forbidden: User jurisdictional scope excludes this district.",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
-          },
-          "404": {
-            "description": "District not found in database.",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
-          }
+          "304": { "description": "Not Modified." },
+          "401": { "description": "Authentication credentials required.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "403": { "description": "Forbidden: Restricted to national role analysts.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
         }
       }
     }
