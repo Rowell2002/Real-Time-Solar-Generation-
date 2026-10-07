@@ -14,6 +14,7 @@
  * - Realistic cumulative energy_kwh tracking
  */
 
+require('dotenv').config();
 const { v4: uuidv4 } = require('uuid');
 const {
   sequelize,

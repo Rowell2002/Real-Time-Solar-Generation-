@@ -4,8 +4,8 @@
   "description": "Sri Lanka Sustainable Energy Authority (SLSEA) Real-Time Solar Generation Tracking REST API",
   "main": "src/app.js",
   "scripts": {
-    "start": "node src/app.js",
-    "dev": "nodemon src/app.js",
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
     "seed": "node src/seeders/seed.js",
     "migrate": "sequelize-cli db:migrate",
     "migrate:undo": "sequelize-cli db:migrate:undo"
