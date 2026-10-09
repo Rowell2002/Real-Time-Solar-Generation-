@@ -6,7 +6,7 @@
 [![Sequelize ORM](https://img.shields.io/badge/Sequelize-v6.37-52B0E7?logo=sequelize&logoColor=white)](https://sequelize.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14%2B-336791?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![OpenAPI 3.0](https://img.shields.io/badge/OpenAPI-3.0.3-85EA2D?logo=swagger&logoColor=black)](http://localhost:3000/docs)
-[![Test Suite](https://img.shields.io/badge/Tests-167%20Passing%20(100%25)-brightgreen)](#7-automated-test-suite-overview--verification-evidence)
+[![Test Suite](https://img.shields.io/badge/Tests-204%20Passing%20(100%25)-brightgreen)](#7-automated-test-suite-overview--verification-evidence)
 [![Maturity](https://img.shields.io/badge/RMM-Level%203%20(HATEOAS)-blue)](#3-richardson-maturity-model-rmm-compliance)
 
 ---
@@ -632,7 +632,7 @@ The test suite spans unit, integration, security, and edge-case validation witho
                 /───────────────────\
 ```
 
-### 7.2 Verification Test Matrix (167 Passing Assertions)
+### 7.2 Verification Test Matrix (204 Passing Assertions)
 
 | Test Suite | Path | Assertions | Core Validations | Status |
 | :--- | :--- | :---: | :--- | :---: |
@@ -641,7 +641,8 @@ The test suite spans unit, integration, security, and edge-case validation witho
 | **District Aggregation** | [`tests/test_district_summary.js`](tests/test_district_summary.js) | **16** | Single-query SQL optimization, `ROW_NUMBER() OVER` window function validation, `DATE(timestamp) = CURRENT_DATE` energy isolation, ETag conditional caching. | **PASS** (100%) |
 | **Error Contract & Docs** | [`tests/test_error_and_docs.js`](tests/test_error_and_docs.js) | **58** | Standard 4-field error contract across all status codes (400, 401, 403, 404, 406, 412, 422), MySQL/Postgres foreign key/duplicate/timeout exception mapping, live Swagger UI HTML, OpenAPI 3.0 schema compliance. | **PASS** (100%) |
 | **Advanced Features** | [`tests/test_advanced_features.js`](tests/test_advanced_features.js) | **53** | Database readiness ping latency probe, user authentication (`/auth/login`), hardware meter token minting, token introspection (`/auth/me`), batch ingestion (up to 500 items), cross-installation rejection, national summary CTE, sliding-window rate limiting. | **PASS** (100%) |
-| **TOTAL** | **5 Test Suites** | **167** | **Zero Regressions Across All Enterprise Subsystems** | **100% PASS** |
+| **Postman Artifacts** | [`tests/test_postman_artifacts.js`](tests/test_postman_artifacts.js) | **37** | Postman Schema v2.1.0 compliance, environment variable mapping, script syntax validity, live simulated workflow for login, auth introspection, and negative error contracts. | **PASS** (100%) |
+| **TOTAL** | **6 Test Suites** | **204** | **Zero Regressions Across All Enterprise Subsystems** | **100% PASS** |
 
 ### 7.3 Test Execution Runbook
 
@@ -661,27 +662,36 @@ node tests/test_error_and_docs.js
 
 # 5. Advanced Enterprise Features Suite
 node tests/test_advanced_features.js
+
+# 6. Postman Collection & Environment Verification Suite
+node tests/test_postman_artifacts.js
 ```
 
-Or execute all 167 verification assertions sequentially:
+Or execute all 204 verification assertions in batch:
 ```bash
-node -e "
-const { execSync } = require('child_process');
-const suites = [
-  'tests/test_auth_rbac.js',
-  'tests/test_unit_readings.js',
-  'tests/test_district_summary.js',
-  'tests/test_error_and_docs.js',
-  'tests/test_advanced_features.js'
-];
-suites.forEach(suite => {
-  console.log('\n======================================================');
-  console.log('RUNNING: ' + suite);
-  console.log('======================================================');
-  execSync('node ' + suite, { stdio: 'inherit' });
-});
-console.log('\nAll 167 test assertions verified successfully!');
-"
+npm run test:all
+```
+
+### 7.4 Postman Collection & Newman CI/CD Automation
+
+The repository includes an enterprise Postman Collection v2.1 and Environment ready for manual testing or headless CI/CD execution:
+* **Collection File**: [`postman_collection.json`](postman_collection.json) (32 requests across 6 folders)
+* **Environment File**: [`postman_environment.json`](postman_environment.json) (Pre-configured credentials, test UUIDs, dynamic tokens)
+
+#### Running with Newman CLI
+To execute the complete automated API test suite headlessly via Newman:
+```bash
+# Install Newman globally (if not already installed)
+npm install -g newman
+
+# Execute entire collection against the active environment
+newman run postman_collection.json -e postman_environment.json
+```
+
+Or generate an HTML test report:
+```bash
+npm install -g newman-reporter-htmlextra
+newman run postman_collection.json -e postman_environment.json -r cli,htmlextra --reporter-htmlextra-export ./newman-report.html
 ```
 
 ---
