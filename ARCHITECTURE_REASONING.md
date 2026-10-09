@@ -269,3 +269,69 @@ As the number of grid-connected solar installations grows across Sri Lanka, `gen
      - Raw OpenAPI specification available at `/docs/openapi.json` and `/api-docs.json`.
      - Configured `BearerAuth` in `components/securitySchemes` using HTTP Bearer format (`JWT`), enabling interactive authentication testing for device writers and regional analysts.
      - Fully specified 2xx success schemas, 4xx/5xx error contracts, tags, operation IDs, and parameter descriptions across all 11 endpoints.
+
+---
+
+### ADR-14: Authentication & Token Lifecycle Management Architecture
+
+* **Context**: While JWT signature and claim validation middlewares (authenticateJwt, authorizeDeviceWrite, authorizeJurisdiction) existed, external clients and automated test runners required first-class endpoints to obtain valid tokens, mint hardware meter credentials, and introspect principal identities.
+* **Specification Decisions**:
+  1. **User Authentication (POST /auth/login)**:
+     - Accepts email and password. Resolves user identity from the users table (or fallback pre-seeded credentials).
+     - Issues signed JWT tokens encapsulating standard claims: sub (user UUID), email, role (national, provincial, or district), scopes (e.g. read:national, read:province:{id}), and jurisdiction_id.
+  2. **Device Hardware Token Minting (POST /auth/device-token)**:
+     - Dedicated route for provisioning IoT telemetry meters.
+     - Validates that the requested installation_id exists in the solar_installations table.
+     - Issues a focused hardware JWT embedded with single-purpose scope claim installation:write:{installation_id}.
+  3. **Principal Identity Introspection (GET /auth/me)**:
+     - Allows clients and dashboards to verify the current session, decode assigned permissions, and inspect token expiration without client-side manual token parsing.
+
+---
+
+### ADR-15: High-Throughput Batch Telemetry Ingestion Architecture
+
+* **Context**: Solar inverters and data loggers often buffer readings during intermittent network outages, then attempt to flush multiple 15-minute readings simultaneously. Transmitting readings one-by-one introduces extreme HTTP handshake overhead and database connection contention.
+* **Specification Decisions**:
+  1. **Batched Payload Contract (POST /installations/:id/readings/batch)**:
+     - Accepts up to 500 readings per request.
+     - Verifies device write scope authorization (installation:write:{id}) via authorizeDeviceWrite.
+  2. **Atomic Item Validation & Deduplication**:
+     - Validates all records individually for non-negative numerical ranges (power_kw, energy_kwh, voltage_v) and valid ISO 8601 timestamps.
+     - Performs in-memory deduplication of duplicate timestamps within the payload.
+     - Queries existing timestamps in the database for the installation to avoid duplicate key errors.
+     - Executes a bulk insert (bulkCreate) for new records.
+  3. **Response Telemetry & HATEOAS Links**:
+     - Returns HTTP 201 Created with ingestion metadata: total_received, inserted_count, duplicate_skipped_count, and chronological timestamp range.
+     - Provides hypermedia links pointing to the batch endpoint, analytical readings collection, and derived operational last-reading resource.
+
+---
+
+### ADR-16: National Grid Solar Generation Summary Engine
+
+* **Context**: National grid operators at the Ceylon Electricity Board (CEB) and SLSEA require high-level, macro-economic solar generation analytics across the entire nation, rolling up all 9 provinces in real-time.
+* **Specification Decisions**:
+  1. **Single-Query CTE Rollup**:
+     - Computes active installations count, latest instantaneous power (via ROW_NUMBER() OVER (PARTITION BY installation_id ORDER BY timestamp DESC)), and today's cumulative energy per province in a single database query execution.
+  2. **National Metric Projections**:
+     - Projects total national instantaneous capacity in both kW and Megawatts (MW), alongside daily cumulative energy in both kWh and Megawatt-hours (MWh).
+     - Returns a structured provinces_breakdown array detailing generation metrics per administrative province.
+  3. **Strict Jurisdictional Isolation**:
+     - Accessible exclusively by users possessing the national role (claim read:national).
+     - Requests from provincial or district analysts are rejected immediately with HTTP 403 Forbidden.
+  4. **Deterministic ETag Caching**:
+     - Computes SHA-256 ETag from the aggregated data payload (excluding volatile timestamps), enabling high-speed 304 Not Modified conditional responses under polling load.
+
+---
+
+### ADR-17: Sliding-Window Rate Limiting & Deep Database Readiness Probes
+
+* **Context**: In an IoT and public analytics grid monitoring system, unbounded traffic risks database connection exhaustion and DoS vulnerabilities. In addition, container orchestrators (Kubernetes / Docker Swarm) require distinct probes for liveness (process alive) vs. readiness (database connectivity established).
+* **Specification Decisions**:
+  1. **In-Memory Sliding-Window Rate Limiter (src/middleware/rateLimiter.js)**:
+     - Tracks client request timestamps within a sliding time window (default 300 requests per 15 minutes).
+     - Emits RFC 6585 standard headers on every request: X-RateLimit-Limit, X-RateLimit-Remaining, and X-RateLimit-Reset.
+     - When limits are exceeded, returns HTTP 429 Too Many Requests with a Retry-After header and the SLSEA standardized 4-field error body.
+  2. **Two-Tiered Health & Diagnostic Probes**:
+     - GET /health (Liveness): Quick shallow check verifying that the Node.js event loop and Express HTTP server are responsive.
+     - GET /health/ready (Readiness): Deep probe executing sequelize.authenticate(). Reports connection status (connected or disconnected), roundtrip database ping latency in milliseconds, and SQL dialect. Returns HTTP 200 when ready or HTTP 503 when degraded.
+

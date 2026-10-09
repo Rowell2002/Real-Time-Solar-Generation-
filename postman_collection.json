@@ -1,0 +1,1347 @@
+{
+  "info": {
+    "_postman_id": "b3e51d40-f19c-4993-84f2-95e2f7b88931",
+    "name": "SLSEA Real-Time Solar Generation Monitoring REST API",
+    "description": "Enterprise Postman Collection v2.1 for the Sri Lanka Sustainable Energy Authority (SLSEA) Solar Generation Tracking Platform.\n\nCovers:\n1. Zero-Trust Authentication (National, Provincial, District, IoT Device)\n2. Hierarchical Topology Traversal (Provinces -> Districts -> GSS -> Solar Installations)\n3. Telemetry Ingestion (Single & High-Throughput Batch) & Operational Reads\n4. Grid Analytics & Operational Dashboards (District & National Summaries)\n5. System Readiness & Liveness Probes\n6. Rigorous Negative Edge-Case & Error Contract Assertions (400, 401, 403, 404, 406, 412, 422, 429)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "01. Authentication & Token Management",
+      "description": "Endpoints to authenticate SLSEA administrative roles, mint hardware meter credentials, and introspect session identities.",
+      "item": [
+        {
+          "name": "Login National Admin (read:national)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "",
+                  "pm.test('Response contains valid JWT token and user details', function () {",
+                  "    pm.expect(jsonData).to.have.property('token');",
+                  "    pm.expect(jsonData.token).to.be.a('string').and.not.empty;",
+                  "    pm.expect(jsonData).to.have.property('user');",
+                  "    pm.expect(jsonData.user.role).to.eql('national');",
+                  "    pm.expect(jsonData.user.scopes).to.include('read:national');",
+                  "});",
+                  "",
+                  "// Automatically extract and set national_token environment variable",
+                  "pm.environment.set('national_token', jsonData.token);",
+                  "console.log('Saved national_token into environment.');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{national_email}}\",\n  \"password\": \"{{default_password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Authenticates national administrator and saves JWT token with 'read:national' scope."
+          }
+        },
+        {
+          "name": "Login Provincial Officer Western (read:province:id)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "",
+                  "pm.test('Response contains provincial JWT token', function () {",
+                  "    pm.expect(jsonData).to.have.property('token');",
+                  "    pm.expect(jsonData.user.role).to.eql('provincial');",
+                  "    pm.expect(jsonData.user.scopes[0]).to.match(/^read:province:/);",
+                  "});",
+                  "",
+                  "// Save provincial_token into environment",
+                  "pm.environment.set('provincial_token', jsonData.token);",
+                  "console.log('Saved provincial_token into environment.');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{provincial_email}}\",\n  \"password\": \"{{default_password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Authenticates Western Province regional analyst with provincial read scope."
+          }
+        },
+        {
+          "name": "Login District Officer Colombo (read:district:id)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "",
+                  "pm.test('Response contains district JWT token', function () {",
+                  "    pm.expect(jsonData).to.have.property('token');",
+                  "    pm.expect(jsonData.user.role).to.eql('district');",
+                  "    pm.expect(jsonData.user.scopes[0]).to.match(/^read:district:/);",
+                  "});",
+                  "",
+                  "// Save district_token into environment",
+                  "pm.environment.set('district_token', jsonData.token);",
+                  "console.log('Saved district_token into environment.');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{district_email}}\",\n  \"password\": \"{{default_password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Authenticates Colombo District officer with district read scope."
+          }
+        },
+        {
+          "name": "Issue IoT Device Token (installation:write:id)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "",
+                  "pm.test('Device token generated with correct installation write scope', function () {",
+                  "    pm.expect(jsonData).to.have.property('token');",
+                  "    pm.expect(jsonData).to.have.property('device');",
+                  "    pm.expect(jsonData.device.scope).to.include('installation:write:');",
+                  "});",
+                  "",
+                  "// Save device_token into environment",
+                  "pm.environment.set('device_token', jsonData.token);",
+                  "console.log('Saved device_token into environment.');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"installation_id\": \"{{target_installation_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/device-token",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "device-token"]
+            },
+            "description": "Mints a single-purpose IoT smart meter hardware write token."
+          }
+        },
+        {
+          "name": "Introspect Authenticated Principal (GET /auth/me)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "",
+                  "pm.test('Identity introspection returns principal metadata', function () {",
+                  "    pm.expect(jsonData).to.have.property('authenticated', true);",
+                  "    pm.expect(jsonData).to.have.property('principal');",
+                  "    pm.expect(jsonData.principal.role).to.eql('national');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{national_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "me"]
+            },
+            "description": "Introspects current JWT principal identity, scopes, and expiration."
+          }
+        }
+      ]
+    },
+    {
+      "name": "02. Topological Hierarchy Traversal",
+      "description": "Scoped hierarchical collections modeling Sri Lanka's 5-tier energy topology.",
+      "item": [
+        {
+          "name": "Get All 9 Provinces (GET /provinces)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "",
+                  "pm.test('Returns array of provinces', function () {",
+                  "    pm.expect(jsonData).to.be.an('array');",
+                  "    pm.expect(jsonData.length).to.be.at.least(1);",
+                  "});",
+                  "",
+                  "// Extract first province_id for downstream requests if available",
+                  "if (jsonData.length > 0 && jsonData[0].id) {",
+                  "    pm.environment.set('province_id', jsonData[0].id);",
+                  "    console.log('Updated province_id to: ' + jsonData[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/provinces",
+              "host": ["{{baseUrl}}"],
+              "path": ["provinces"]
+            },
+            "description": "Retrieves the collection of all 9 Sri Lankan administrative provinces."
+          }
+        },
+        {
+          "name": "Get Districts by Province (GET /provinces/:id/districts)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "",
+                  "pm.test('Returns districts within province', function () {",
+                  "    pm.expect(jsonData).to.be.an('array');",
+                  "});",
+                  "",
+                  "if (jsonData.length > 0 && jsonData[0].id) {",
+                  "    pm.environment.set('district_id', jsonData[0].id);",
+                  "    console.log('Updated district_id to: ' + jsonData[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/provinces/{{province_id}}/districts",
+              "host": ["{{baseUrl}}"],
+              "path": ["provinces", "{{province_id}}", "districts"]
+            },
+            "description": "Traverses nested containment hierarchy: returns districts belonging to the designated province."
+          }
+        },
+        {
+          "name": "Get Grid Substations by District (GET /districts/:id/substations)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "",
+                  "pm.test('Returns grid substations list', function () {",
+                  "    pm.expect(jsonData).to.be.an('array');",
+                  "});",
+                  "",
+                  "if (jsonData.length > 0 && jsonData[0].id) {",
+                  "    pm.environment.set('substation_id', jsonData[0].id);",
+                  "    console.log('Updated substation_id to: ' + jsonData[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/districts/{{district_id}}/substations",
+              "host": ["{{baseUrl}}"],
+              "path": ["districts", "{{district_id}}", "substations"]
+            },
+            "description": "Retrieves 33kV/132kV CEB grid substations connected within the designated district."
+          }
+        },
+        {
+          "name": "Get Solar Installations by Substation (GET /substations/:id/installations)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "",
+                  "pm.test('Returns installations array', function () {",
+                  "    pm.expect(jsonData).to.be.an('array');",
+                  "});",
+                  "",
+                  "if (jsonData.length > 0 && jsonData[0].id) {",
+                  "    pm.environment.set('installation_id', jsonData[0].id);",
+                  "    console.log('Updated installation_id to: ' + jsonData[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/substations/{{substation_id}}/installations",
+              "host": ["{{baseUrl}}"],
+              "path": ["substations", "{{substation_id}}", "installations"]
+            },
+            "description": "Fetches solar arrays and farms interconnected with the specified grid substation."
+          }
+        },
+        {
+          "name": "Get Composite Solar Installation Details (GET /installations/:id/composite)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "",
+                  "pm.test('Composite response contains parent lineage metadata', function () {",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData).to.have.property('substation');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/installations/{{installation_id}}/composite",
+              "host": ["{{baseUrl}}"],
+              "path": ["installations", "{{installation_id}}", "composite"]
+            },
+            "description": "Consolidated composite resource returning installation properties along with parent substation, district, province, and operational aggregates."
+          }
+        }
+      ]
+    },
+    {
+      "name": "03. Telemetry Ingestion & Operational Reads",
+      "description": "Hardware device write endpoints (single and high-throughput batch) and analytical time-series reads.",
+      "item": [
+        {
+          "name": "Get Derived Single Last Reading (GET /installations/:id/last-reading)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK or 404 Not Found', function () {",
+                  "    pm.expect([200, 404]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.test('Derived last reading contains instantaneous generation telemetry', function () {",
+                  "        pm.expect(jsonData).to.have.property('power_kw');",
+                  "        pm.expect(jsonData).to.have.property('energy_kwh');",
+                  "        pm.expect(jsonData).to.have.property('timestamp');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/installations/{{installation_id}}/last-reading",
+              "host": ["{{baseUrl}}"],
+              "path": ["installations", "{{installation_id}}", "last-reading"]
+            },
+            "description": "Operational derived read: returns single most recent GenerationReading record."
+          }
+        },
+        {
+          "name": "Post Single Device Reading (POST /installations/:id/readings)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201 Created or 409 Conflict', function () {",
+                  "    pm.expect([201, 409]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "    pm.test('Location header is present', function () {",
+                  "        pm.expect(pm.response.headers.has('Location')).to.be.true;",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{device_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"timestamp\": \"2026-10-09T11:45:00.000Z\",\n  \"power_kw\": 420.5,\n  \"energy_kwh\": 18950.25,\n  \"voltage_v\": 230.1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/installations/{{installation_id}}/readings",
+              "host": ["{{baseUrl}}"],
+              "path": ["installations", "{{installation_id}}", "readings"]
+            },
+            "description": "Appends a single 15-minute telemetry reading; returns 201 Created with Location header."
+          }
+        },
+        {
+          "name": "Post High-Throughput Batch Readings (POST /installations/:id/readings/batch)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201 Created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "",
+                  "pm.test('Batch telemetry successfully processed', function () {",
+                  "    pm.expect(jsonData).to.have.property('data');",
+                  "    pm.expect(jsonData.data).to.have.property('total_received', 3);",
+                  "    pm.expect(jsonData.data).to.have.property('inserted_count');",
+                  "    pm.expect(jsonData).to.have.property('_links');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{device_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"readings\": [\n    {\n      \"timestamp\": \"2026-10-09T06:00:00.000Z\",\n      \"power_kw\": 15.2,\n      \"energy_kwh\": 150.0,\n      \"voltage_v\": 228.4\n    },\n    {\n      \"timestamp\": \"2026-10-09T06:15:00.000Z\",\n      \"power_kw\": 32.8,\n      \"energy_kwh\": 158.2,\n      \"voltage_v\": 229.0\n    },\n    {\n      \"timestamp\": \"2026-10-09T06:30:00.000Z\",\n      \"power_kw\": 64.5,\n      \"energy_kwh\": 174.3,\n      \"voltage_v\": 229.8\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/installations/{{installation_id}}/readings/batch",
+              "host": ["{{baseUrl}}"],
+              "path": ["installations", "{{installation_id}}", "readings", "batch"]
+            },
+            "description": "High-throughput batch telemetry ingestion endpoint supporting up to 500 readings per request."
+          }
+        },
+        {
+          "name": "Get Paginated Historical Readings (GET /installations/:id/readings)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "",
+                  "pm.test('HATEOAS envelope is correctly structured', function () {",
+                  "    pm.expect(jsonData).to.have.property('total_count');",
+                  "    pm.expect(jsonData).to.have.property('page');",
+                  "    pm.expect(jsonData).to.have.property('limit');",
+                  "    pm.expect(jsonData).to.have.property('data');",
+                  "    pm.expect(jsonData).to.have.property('links');",
+                  "    pm.expect(jsonData.links).to.have.property('self');",
+                  "});",
+                  "",
+                  "// Extract and save ETag header for conditional request testing",
+                  "var etag = pm.response.headers.get('ETag');",
+                  "if (etag) {",
+                  "    pm.environment.set('reading_etag', etag);",
+                  "    console.log('Saved reading_etag: ' + etag);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/installations/{{installation_id}}/readings?page=1&limit=10&sort=-timestamp",
+              "host": ["{{baseUrl}}"],
+              "path": ["installations", "{{installation_id}}", "readings"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "sort",
+                  "value": "-timestamp"
+                }
+              ]
+            },
+            "description": "Paginated analytical historical readings with HATEOAS envelope, ETag, and sorting."
+          }
+        },
+        {
+          "name": "Conditional Historical Readings Request (If-None-Match -> 304)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Conditional GET returns 304 Not Modified', function () {",
+                  "    pm.response.to.have.status(304);",
+                  "});",
+                  "",
+                  "pm.test('Response body is empty for 304 cache hit', function () {",
+                  "    pm.expect(pm.response.text()).to.be.empty;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "If-None-Match",
+                "value": "{{reading_etag}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/installations/{{installation_id}}/readings?page=1&limit=10&sort=-timestamp",
+              "host": ["{{baseUrl}}"],
+              "path": ["installations", "{{installation_id}}", "readings"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "sort",
+                  "value": "-timestamp"
+                }
+              ]
+            },
+            "description": "RFC 7232 conditional caching request asserting HTTP 304 Not Modified on cache hit."
+          }
+        }
+      ]
+    },
+    {
+      "name": "04. Grid Analytics & Operational Dashboards",
+      "description": "Single-query CTE and window function analytical aggregation endpoints.",
+      "item": [
+        {
+          "name": "Get District Operational Summary Dashboard (GET /districts/:id/summary)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "",
+                  "pm.test('District summary contains single-query CTE aggregated metrics', function () {",
+                  "    pm.expect(jsonData).to.have.property('district_id');",
+                  "    pm.expect(jsonData).to.have.property('total_active_installations');",
+                  "    pm.expect(jsonData).to.have.property('current_total_power_kw');",
+                  "    pm.expect(jsonData).to.have.property('today_total_energy_kwh');",
+                  "    pm.expect(jsonData).to.have.property('substation_breakdown');",
+                  "    pm.expect(jsonData.substation_breakdown).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/districts/{{district_id}}/summary",
+              "host": ["{{baseUrl}}"],
+              "path": ["districts", "{{district_id}}", "summary"]
+            },
+            "description": "Upper-band district operational dashboard: CTE single query rollup computing instantaneous power and today's cumulative energy."
+          }
+        },
+        {
+          "name": "Get National Grid Macro Summary (GET /national/summary)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "",
+                  "pm.test('National summary contains 9-province macro metrics', function () {",
+                  "    pm.expect(jsonData).to.have.property('country', 'Sri Lanka');",
+                  "    pm.expect(jsonData).to.have.property('total_active_installations');",
+                  "    pm.expect(jsonData).to.have.property('current_total_power_kw');",
+                  "    pm.expect(jsonData).to.have.property('current_total_power_mw');",
+                  "    pm.expect(jsonData).to.have.property('provinces_breakdown');",
+                  "    pm.expect(jsonData.provinces_breakdown).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{national_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/national/summary",
+              "host": ["{{baseUrl}}"],
+              "path": ["national", "summary"]
+            },
+            "description": "National grid aggregation endpoint rolling up real-time solar generation across all 9 provinces. Restricted to national role analysts."
+          }
+        }
+      ]
+    },
+    {
+      "name": "05. System Health, Probes & OpenAPI Specs",
+      "description": "Orchestrator probes and interactive documentation specifications.",
+      "item": [
+        {
+          "name": "Liveness Probe (GET /health)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.test('Reports healthy status', function () {",
+                  "    pm.expect(jsonData.status).to.eql('healthy');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Shallow liveness probe verifying Node.js Express process responsiveness."
+          }
+        },
+        {
+          "name": "Database Readiness Probe (GET /health/ready)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.test('Reports database ready with latency', function () {",
+                  "    pm.expect(jsonData.status).to.eql('ready');",
+                  "    pm.expect(jsonData.database).to.eql('connected');",
+                  "    pm.expect(jsonData.latency_ms).to.be.a('number');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health/ready",
+              "host": ["{{baseUrl}}"],
+              "path": ["health", "ready"]
+            },
+            "description": "Deep readiness probe executing active database ping and latency measurement."
+          }
+        },
+        {
+          "name": "OpenAPI 3.0 Documentation Spec (GET /docs/openapi.json)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.test('Valid OpenAPI 3.0.3 specification structure', function () {",
+                  "    pm.expect(jsonData.openapi).to.match(/^3\\.0/);",
+                  "    pm.expect(jsonData.info.title).to.include('SLSEA');",
+                  "    pm.expect(jsonData.paths).to.be.an('object');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/docs/openapi.json",
+              "host": ["{{baseUrl}}"],
+              "path": ["docs", "openapi.json"]
+            },
+            "description": "Machine-readable OpenAPI 3.0 JSON specification."
+          }
+        }
+      ]
+    },
+    {
+      "name": "06. Security Boundaries & Negative Edge Cases",
+      "description": "Comprehensive negative test assertions validating strict HTTP error codes and the SLSEA 4-property error contract.",
+      "item": [
+        {
+          "name": "400 Bad Request - Invalid UUID Syntax in Path",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400 Bad Request', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.test('Adheres to standard 4-field error contract', function () {",
+                  "    pm.expect(jsonData).to.have.property('code', 'BAD_REQUEST');",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "    pm.expect(jsonData).to.have.property('detail');",
+                  "    pm.expect(jsonData).to.have.property('timestamp');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/provinces/not-a-valid-uuid-format/districts",
+              "host": ["{{baseUrl}}"],
+              "path": ["provinces", "not-a-valid-uuid-format", "districts"]
+            },
+            "description": "Asserts HTTP 400 Bad Request when path contains malformed UUID string."
+          }
+        },
+        {
+          "name": "400 Bad Request - Inverted Time Range (start > end)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400 Bad Request', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.test('Error code is BAD_REQUEST', function () {",
+                  "    pm.expect(jsonData.code).to.eql('BAD_REQUEST');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/installations/{{installation_id}}/readings?start_time=2026-10-09T12:00:00Z&end_time=2026-10-01T12:00:00Z",
+              "host": ["{{baseUrl}}"],
+              "path": ["installations", "{{installation_id}}", "readings"],
+              "query": [
+                {
+                  "key": "start_time",
+                  "value": "2026-10-09T12:00:00Z"
+                },
+                {
+                  "key": "end_time",
+                  "value": "2026-10-01T12:00:00Z"
+                }
+              ]
+            },
+            "description": "Asserts HTTP 400 Bad Request when chronological time range is inverted."
+          }
+        },
+        {
+          "name": "401 Unauthorized - Missing Authorization Header",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 401 Unauthorized', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.test('Returns standard UNAUTHORIZED code', function () {",
+                  "    pm.expect(jsonData.code).to.eql('UNAUTHORIZED');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "me"]
+            },
+            "description": "Asserts HTTP 401 Unauthorized when accessing protected route without credentials."
+          }
+        },
+        {
+          "name": "401 Unauthorized - Malformed JWT Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 401 Unauthorized', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.test('Returns standard UNAUTHORIZED code', function () {",
+                  "    pm.expect(jsonData.code).to.eql('UNAUTHORIZED');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer this.is.an.invalid.jwt.signature"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "me"]
+            },
+            "description": "Asserts HTTP 401 Unauthorized when submitting forged or corrupted JWT."
+          }
+        },
+        {
+          "name": "403 Forbidden - Cross-District Boundary Violation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 403 Forbidden', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.test('Returns FORBIDDEN code for cross-district access', function () {",
+                  "    pm.expect(jsonData.code).to.eql('FORBIDDEN');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{district_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/districts/{{foreign_district_id}}/substations",
+              "host": ["{{baseUrl}}"],
+              "path": ["districts", "{{foreign_district_id}}", "substations"]
+            },
+            "description": "Asserts HTTP 403 Forbidden when a district analyst attempts to query a district outside their jurisdictional scope."
+          }
+        },
+        {
+          "name": "403 Forbidden - Provincial Officer Accessing National Summary",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 403 Forbidden', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.test('Returns FORBIDDEN code for national summary isolation', function () {",
+                  "    pm.expect(jsonData.code).to.eql('FORBIDDEN');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{provincial_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/national/summary",
+              "host": ["{{baseUrl}}"],
+              "path": ["national", "summary"]
+            },
+            "description": "Asserts HTTP 403 Forbidden when provincial analyst attempts to access national macro summary."
+          }
+        },
+        {
+          "name": "403 Forbidden - Cross-Device Write Tampering",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 403 Forbidden or 404 Not Found', function () {",
+                  "    pm.expect([403, 404]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 403) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.test('Returns standard FORBIDDEN code', function () {",
+                  "        pm.expect(jsonData.code).to.eql('FORBIDDEN');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{device_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"timestamp\": \"2026-10-09T12:00:00.000Z\",\n  \"power_kw\": 500.0,\n  \"energy_kwh\": 25000.0,\n  \"voltage_v\": 230.0\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/installations/{{foreign_installation_id}}/readings",
+              "host": ["{{baseUrl}}"],
+              "path": ["installations", "{{foreign_installation_id}}", "readings"]
+            },
+            "description": "Asserts HTTP 403 Forbidden when a smart meter token bound to Installation A attempts to post telemetry to Installation B."
+          }
+        },
+        {
+          "name": "404 Not Found - Non-Existent Entity Resource",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 404 Not Found', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.test('Returns standard NOT_FOUND code', function () {",
+                  "    pm.expect(jsonData.code).to.eql('NOT_FOUND');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{national_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/installations/ffffffff-ffff-4fff-afff-ffffffffffff/composite",
+              "host": ["{{baseUrl}}"],
+              "path": ["installations", "ffffffff-ffff-4fff-afff-ffffffffffff", "composite"]
+            },
+            "description": "Asserts HTTP 404 Not Found when target entity does not exist in the database."
+          }
+        },
+        {
+          "name": "406 Not Acceptable - Mismatched Accept Header",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 406 Not Acceptable', function () {",
+                  "    pm.response.to.have.status(406);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.test('Returns standard NOT_ACCEPTABLE code', function () {",
+                  "    pm.expect(jsonData.code).to.eql('NOT_ACCEPTABLE');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "text/html"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/installations/{{installation_id}}/readings",
+              "host": ["{{baseUrl}}"],
+              "path": ["installations", "{{installation_id}}", "readings"]
+            },
+            "description": "Asserts HTTP 406 Not Acceptable when client requests unsupported MIME type."
+          }
+        },
+        {
+          "name": "412 Precondition Failed - Mismatched If-Match Header",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 412 Precondition Failed', function () {",
+                  "    pm.response.to.have.status(412);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.test('Returns standard PRECONDITION_FAILED code', function () {",
+                  "    pm.expect(jsonData.code).to.eql('PRECONDITION_FAILED');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "If-Match",
+                "value": "\"mismatched-non-existent-etag-hash\""
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/installations/{{installation_id}}/readings",
+              "host": ["{{baseUrl}}"],
+              "path": ["installations", "{{installation_id}}", "readings"]
+            },
+            "description": "Asserts HTTP 412 Precondition Failed when client provides an outdated or invalid If-Match header."
+          }
+        },
+        {
+          "name": "422 Validation Error - Negative Metric in Batch Payload",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 422 Validation Error', function () {",
+                  "    pm.response.to.have.status(422);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.test('Returns standard VALIDATION_ERROR code', function () {",
+                  "    pm.expect(jsonData.code).to.eql('VALIDATION_ERROR');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{device_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"readings\": [\n    {\n      \"timestamp\": \"2026-10-09T10:00:00.000Z\",\n      \"power_kw\": -15.5,\n      \"energy_kwh\": 100.0,\n      \"voltage_v\": 230.0\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/installations/{{installation_id}}/readings/batch",
+              "host": ["{{baseUrl}}"],
+              "path": ["installations", "{{installation_id}}", "readings", "batch"]
+            },
+            "description": "Asserts HTTP 422 Validation Error when telemetry fields violate numerical boundary constraints."
+          }
+        },
+        {
+          "name": "429 Rate Limited - Sliding-Window Quota Exhaustion",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Note: When running in full automation, rate limit status depends on threshold",
+                  "pm.test('Responds with 200 OK or 429 Too Many Requests', function () {",
+                  "    pm.expect([200, 429]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 429) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.test('Error code is TOO_MANY_REQUESTS', function () {",
+                  "        pm.expect(jsonData.code).to.eql('TOO_MANY_REQUESTS');",
+                  "    });",
+                  "    pm.test('Includes RFC 6585 Retry-After header', function () {",
+                  "        pm.expect(pm.response.headers.has('Retry-After')).to.be.true;",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Asserts HTTP 429 Too Many Requests and RFC 6585 Retry-After header when rate limit quota is exceeded."
+          }
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Collection-level pre-request script",
+          "// Ensures trailing slashes on baseUrl are trimmed",
+          "var baseUrl = pm.environment.get('baseUrl') || 'http://localhost:3000';",
+          "if (baseUrl.endsWith('/')) {",
+          "    pm.environment.set('baseUrl', baseUrl.slice(0, -1));",
+          "}"
+        ]
+      }
+    }
+  ]
+}

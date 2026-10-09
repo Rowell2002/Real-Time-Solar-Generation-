@@ -79,6 +79,11 @@ class ApiError extends Error {
     return new ApiError(422, code, message, detail);
   }
 
+  /** 429 Too Many Requests */
+  static tooManyRequests(message = 'Rate limit quota exceeded.', detail = null, code = 'TOO_MANY_REQUESTS') {
+    return new ApiError(429, code, message, detail);
+  }
+
   /** 500 Internal Server Error */
   static internal(message = 'Internal server error occurred.', detail = null, code = 'INTERNAL_SERVER_ERROR') {
     return new ApiError(500, code, message, detail);
