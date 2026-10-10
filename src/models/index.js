@@ -1,18 +1,21 @@
 require('dotenv').config();
+require('pg');
+require('pg-hstore');
 const { Sequelize } = require('sequelize');
 
 // Load environment configuration or fallback
-const databaseUrl = process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/slsea_solar';
+const rawDatabaseUrl = process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/slsea_solar';
+const databaseUrl = rawDatabaseUrl.replace(/[?&]sslmode=[^&]+/, '');
 
 // Detect dialect: 'mysql', 'mariadb', or 'postgres'
-const dialect = process.env.DB_DIALECT || (databaseUrl.startsWith('mysql') ? 'mysql' : databaseUrl.startsWith('mariadb') ? 'mariadb' : 'postgres');
+const dialect = process.env.DB_DIALECT || (rawDatabaseUrl.startsWith('mysql') ? 'mysql' : rawDatabaseUrl.startsWith('mariadb') ? 'mariadb' : 'postgres');
 
 const isPostgres = dialect === 'postgres';
 const useSsl = isPostgres && (
   process.env.DB_SSL === 'true' ||
-  databaseUrl.includes('sslmode=require') ||
-  databaseUrl.includes('supabase.co') ||
-  databaseUrl.includes('pooler.supabase.com')
+  rawDatabaseUrl.includes('sslmode=require') ||
+  rawDatabaseUrl.includes('supabase.co') ||
+  rawDatabaseUrl.includes('pooler.supabase.com')
 );
 
 const dialectOptions = useSsl ? {
