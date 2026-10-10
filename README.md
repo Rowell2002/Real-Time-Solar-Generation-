@@ -225,7 +225,7 @@ The API adheres to Leonard Richardson's REST Maturity Model, advancing beyond ba
 | **Level 0**<br>*The Swamp of POX* | Single endpoint, single HTTP verb (`POST`), action dispatching in payload. | **Explicitly Rejected**. The API does not use monolithic remote procedure call endpoints or generic action tunneling. | ✅ **Compliant** |
 | **Level 1**<br>*Resources* | Individual URIs identifying atomic resources and nested collections. | **Implemented**. Granular resource addresses: `/provinces/{id}`, `/districts/{id}/substations`, `/installations/{id}/composite`, `/installations/{id}/last-reading`. | ✅ **Compliant** |
 | **Level 2**<br>*HTTP Verbs & Status* | Semantic verbs (`GET`, `POST`), standard status codes, content negotiation, conditional validation. | **Implemented**. Semantic verbs; status codes `200`, `201`, `304`, `400`, `401`, `403`, `404`, `406`, `412`, `422`, `429`, `503`; `ETag` and `Last-Modified` validation; `Accept` negotiation. | ✅ **Compliant** |
-| **Level 3**<br>*Hypermedia (HATEOAS)* | Self-describing messages with contextual hypermedia links driving client navigation state. | **Implemented**. RFC 5988 / HAL `links` envelopes provided on paginated analytical collections and batch ingestion responses. | ❌ *Not Implemented* |
+| **Level 3**<br>*Hypermedia (HATEOAS)* | Self-describing messages with contextual hypermedia links driving client navigation state. | RFC 5988 / HAL `links` envelopes provided on paginated analytical collections and batch ingestion responses. | ❌ *Not Implemented* |
 
 ### 3.2 Level 3 HATEOAS & Hypermedia Engine Demonstration
 
