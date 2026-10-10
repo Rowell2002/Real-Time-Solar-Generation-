@@ -61,16 +61,8 @@ const swaggerHtml = `<!DOCTYPE html>
 </body>
 </html>`;
 
-// Root landing route
+// Root landing route - returns JSON service catalog
 app.get('/', (req, res) => {
-  const acceptsHtml = req.accepts('html');
-  const userAgent = req.headers['user-agent'] || '';
-  const isBrowser = acceptsHtml && userAgent.includes('Mozilla') && !req.xhr;
-
-  if (isBrowser) {
-    return res.redirect('/docs');
-  }
-
   res.status(200).json({
     service: 'Sri Lanka Sustainable Energy Authority (SLSEA) Solar Generation Tracking API',
     version: '1.1.0',
