@@ -9,6 +9,7 @@
     "seed": "node src/seeders/seed.js",
     "migrate": "sequelize-cli db:migrate",
     "migrate:undo": "sequelize-cli db:migrate:undo",
+    "audit": "node tests/run_live_production_audit.js",
     "test": "node tests/test_advanced_features.js",
     "test:postman": "node tests/test_postman_artifacts.js",
     "test:all": "node tests/test_auth_rbac.js && node tests/test_unit_readings.js && node tests/test_district_summary.js && node tests/test_error_and_docs.js && node tests/test_advanced_features.js && node tests/test_postman_artifacts.js"
