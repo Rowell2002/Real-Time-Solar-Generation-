@@ -1,9 +1,9 @@
 # 🧪 SLSEA Solar Tracking Platform - Live Production Verification Transcript & Evidence
 
-**Document Identifier**: `SLSEA-AUDIT-EVIDENCE-1791611294147`  
+**Document Identifier**: `SLSEA-AUDIT-EVIDENCE-1791611381281`  
 **Target Environment**: **Vercel Production** (`https://real-time-solar-generation.vercel.app`)  
 **Backend Database**: **Supabase PostgreSQL** (`aws-0-ap-northeast-2.pooler.supabase.com`)  
-**Audit Timestamp**: `Sat, 10 Oct 2026 05:48:14 GMT`  
+**Audit Timestamp**: `Sat, 10 Oct 2026 05:49:41 GMT`  
 **Overall Result**: **27/27 Tests Passed (100.0% Compliance)**  
 
 ---
@@ -18,7 +18,7 @@ This audit transcript serves as empirical supporting evidence for the **Sri Lank
 | **API Hierarchy & Routing** | 4-tier hierarchy: National $\rightarrow$ Province $\rightarrow$ District $\rightarrow$ Substation $\rightarrow$ Solar Unit | Full hierarchical routing with ISO standard response envelopes | ✅ **Exceeds (70%+)** |
 | **Security & RBAC** | JWT authentication with role-based & jurisdiction scopes | Scoped tokens for National Admin, Provincial Officer, District Officer, IoT meter | ✅ **Exceeds (70%+)** |
 | **Composite & Derived Resources** | Composite topology and operational state projections | `/installations/:id/composite` and `/installations/:id/last-reading` verified | ✅ **Exceeds (70%+)** |
-| **Database Scale & Realism** | 9 Provinces, 25 Districts, $\ge$ 20 Substations, $\ge$ 200 Installations, $\ge$ 100k readings | Verified in Supabase: **9 Provinces, 25 Districts, 28 Substations, 200 Units, 134,409+ Readings** | ✅ **Exceeds (70%+)** |
+| **Database Scale & Realism** | 9 Provinces, 25 Districts, $\ge$ 20 Substations, $\ge$ 200 Installations, $\ge$ 100k readings | Verified in Supabase: **9 Provinces, 25 Districts, 28 Substations, 200 Units, 134,412+ Readings** | ✅ **Exceeds (70%+)** |
 | **Solar Physics Modeling** | Diurnal curve (0 kW at night, peak at solar noon, voltage bounds) | SQL analytics confirm $0.0\,\text{kW}$ nighttime generation and bell-curve solar noon output | ✅ **Exceeds (70%+)** |
 | **API Documentation** | OpenAPI 3.0 specification & interactive UI | Live Swagger UI console and valid machine-readable `/docs/openapi.json` | ✅ **Exceeds (70%+)** |
 
@@ -32,7 +32,7 @@ This audit transcript serves as empirical supporting evidence for the **Sri Lank
 | **Districts** | 25 Districts | **25** | All 25 districts mapped with foreign keys to respective provinces |
 | **Grid Substations** | $\ge 20$ Substations | **28** | 28 High-Voltage Grid Substations with capacity attributes |
 | **Solar Installations** | $\ge 200$ Solar Units | **200** | 200 unique commercial and utility solar arrays with meter IDs |
-| **Telemetry Readings** | 1 Week @ 15-min Intervals | **134,409** | Time-series telemetry with active power, cumulative energy, and grid voltage |
+| **Telemetry Readings** | 1 Week @ 15-min Intervals | **134,412** | Time-series telemetry with active power, cumulative energy, and grid voltage |
 | **Nighttime Solar Output** | Strict 0 kW (18:30 - 05:30) | **0.0 kW (Max: 0 kW)** | Verified via aggregation query over all night intervals |
 | **Solar Noon Generation** | Peak output between 11:30 - 13:30 | **943.58 kW (Average)** | Half-sine solar irradiance with micro-meteorological cloud factors |
 
@@ -46,11 +46,11 @@ This audit transcript serves as empirical supporting evidence for the **Sri Lank
     "section": "Health & Core",
     "testName": "GET / returns JSON service overview",
     "passed": true,
-    "timestamp": "2026-10-10T05:47:55.887Z",
+    "timestamp": "2026-10-10T05:49:19.196Z",
     "method": "GET",
     "endpoint": "/",
     "status": 200,
-    "durationMs": 1523,
+    "durationMs": 865,
     "response": {
       "service": "Sri Lanka Sustainable Energy Authority (SLSEA) Solar Generation Tracking API",
       "version": "1.1.0",
@@ -60,21 +60,21 @@ This audit transcript serves as empirical supporting evidence for the **Sri Lank
       "health_liveness": "/health",
       "health_readiness": "/health/ready",
       "api_v1_base": "/api/v1",
-      "timestamp": "2026-10-10T05:47:56.165Z"
+      "timestamp": "2026-10-10T05:49:19.475Z"
     }
   },
   {
     "section": "Health & Core",
     "testName": "GET /health returns healthy status",
     "passed": true,
-    "timestamp": "2026-10-10T05:47:57.321Z",
+    "timestamp": "2026-10-10T05:49:19.873Z",
     "method": "GET",
     "endpoint": "/health",
     "status": 200,
-    "durationMs": 1433,
+    "durationMs": 676,
     "response": {
       "status": "healthy",
-      "timestamp": "2026-10-10T05:47:57.594Z",
+      "timestamp": "2026-10-10T05:49:20.147Z",
       "service": "SLSEA Solar Generation Tracking API"
     }
   },
@@ -82,17 +82,17 @@ This audit transcript serves as empirical supporting evidence for the **Sri Lank
     "section": "Health & Core",
     "testName": "GET /health/ready connects to Supabase PostgreSQL",
     "passed": true,
-    "timestamp": "2026-10-10T05:48:00.905Z",
+    "timestamp": "2026-10-10T05:49:23.724Z",
     "method": "GET",
     "endpoint": "/health/ready",
     "status": 200,
-    "durationMs": 3584,
+    "durationMs": 3851,
     "response": {
       "status": "ready",
       "database": "connected",
       "dialect": "postgres",
-      "latency_ms": 3292,
-      "timestamp": "2026-10-10T05:48:01.200Z",
+      "latency_ms": 3291,
+      "timestamp": "2026-10-10T05:49:24.014Z",
       "service": "SLSEA Solar Generation Tracking API"
     }
   },
@@ -100,55 +100,55 @@ This audit transcript serves as empirical supporting evidence for the **Sri Lank
     "section": "Health & Core",
     "testName": "GET /docs/openapi.json returns valid OpenAPI 3.0 specification",
     "passed": true,
-    "timestamp": "2026-10-10T05:48:01.214Z",
+    "timestamp": "2026-10-10T05:49:24.276Z",
     "method": "GET",
     "endpoint": "/docs/openapi.json",
     "status": 200,
-    "durationMs": 309,
+    "durationMs": 552,
     "pathCount": 16
   },
   {
     "section": "Security & RBAC",
     "testName": "National Admin login issues JWT Bearer token with full scope",
     "passed": true,
-    "timestamp": "2026-10-10T05:48:01.706Z",
+    "timestamp": "2026-10-10T05:49:24.777Z",
     "method": "POST",
     "endpoint": "/api/v1/auth/login",
     "status": 200,
-    "durationMs": 492,
+    "durationMs": 501,
     "role": "national"
   },
   {
     "section": "Security & RBAC",
     "testName": "Provincial Officer login issues jurisdiction-scoped JWT",
     "passed": true,
-    "timestamp": "2026-10-10T05:48:02.178Z",
+    "timestamp": "2026-10-10T05:49:25.502Z",
     "method": "POST",
     "endpoint": "/api/v1/auth/login",
     "status": 200,
-    "durationMs": 472,
+    "durationMs": 725,
     "role": "provincial"
   },
   {
     "section": "Security & RBAC",
     "testName": "District Officer login issues district-scoped JWT",
     "passed": true,
-    "timestamp": "2026-10-10T05:48:02.660Z",
+    "timestamp": "2026-10-10T05:49:25.978Z",
     "method": "POST",
     "endpoint": "/api/v1/auth/login",
     "status": 200,
-    "durationMs": 482,
+    "durationMs": 476,
     "role": "district"
   },
   {
     "section": "Security & RBAC",
     "testName": "GET /auth/me decodes active identity and roles",
     "passed": true,
-    "timestamp": "2026-10-10T05:48:02.954Z",
+    "timestamp": "2026-10-10T05:49:27.088Z",
     "method": "GET",
     "endpoint": "/api/v1/auth/me",
     "status": 200,
-    "durationMs": 293,
+    "durationMs": 1110,
     "principal": {
       "sub": "ea6aa569-2836-4948-ad1b-addf75c5aa8a",
       "email": "national.admin@slsea.gov.lk",
@@ -159,8 +159,8 @@ This audit transcript serves as empirical supporting evidence for the **Sri Lank
       "scopes": [
         "read:national"
       ],
-      "iat": 1791611281,
-      "exp": 1791697681,
+      "iat": 1791611365,
+      "exp": 1791697765,
       "aud": "slsea-solar-api",
       "iss": "slsea.gov.lk"
     }
@@ -169,27 +169,27 @@ This audit transcript serves as empirical supporting evidence for the **Sri Lank
     "section": "Security & RBAC",
     "testName": "Reject unauthenticated request with 401 Unauthorized",
     "passed": true,
-    "timestamp": "2026-10-10T05:48:03.276Z",
+    "timestamp": "2026-10-10T05:49:27.376Z",
     "method": "GET",
     "endpoint": "/api/v1/national/summary",
     "status": 401,
-    "durationMs": 322,
+    "durationMs": 288,
     "errorContract": {
       "code": "UNAUTHORIZED",
       "message": "Authentication credentials are required.",
       "detail": "Missing Authorization header. Expected format: 'Authorization: Bearer <token>'.",
-      "timestamp": "2026-10-10T05:48:03.536Z"
+      "timestamp": "2026-10-10T05:49:27.665Z"
     }
   },
   {
     "section": "API Analytics",
     "testName": "GET /national/summary aggregates national solar generation across 9 provinces",
     "passed": true,
-    "timestamp": "2026-10-10T05:48:03.907Z",
+    "timestamp": "2026-10-10T05:49:31.005Z",
     "method": "GET",
     "endpoint": "/api/v1/national/summary",
     "status": 200,
-    "durationMs": 630,
+    "durationMs": 3628,
     "summaryData": {
       "country": "Sri Lanka",
       "total_provinces": 9,
@@ -287,22 +287,22 @@ This audit transcript serves as empirical supporting evidence for the **Sri Lank
     "section": "Hierarchy API (Tier 1)",
     "testName": "GET /provinces returns 9 provinces of Sri Lanka",
     "passed": true,
-    "timestamp": "2026-10-10T05:48:04.381Z",
+    "timestamp": "2026-10-10T05:49:31.494Z",
     "method": "GET",
     "endpoint": "/api/v1/provinces",
     "status": 200,
-    "durationMs": 474,
+    "durationMs": 489,
     "count": 9
   },
   {
     "section": "Hierarchy API (Tier 2)",
     "testName": "GET /provinces/:id/districts returns 3 districts for 'Western'",
     "passed": true,
-    "timestamp": "2026-10-10T05:48:04.861Z",
+    "timestamp": "2026-10-10T05:49:31.980Z",
     "method": "GET",
     "endpoint": "/api/v1/provinces/a3655e22-b918-4c18-9826-43dee753090c/districts",
     "status": 200,
-    "durationMs": 480,
+    "durationMs": 486,
     "districts": [
       "Colombo",
       "Gampaha",
@@ -313,11 +313,11 @@ This audit transcript serves as empirical supporting evidence for the **Sri Lank
     "section": "API Analytics",
     "testName": "GET /districts/:id/summary calculates operational metrics for 'Colombo'",
     "passed": true,
-    "timestamp": "2026-10-10T05:48:05.363Z",
+    "timestamp": "2026-10-10T05:49:32.469Z",
     "method": "GET",
     "endpoint": "/api/v1/districts/f0d2d7fe-5e72-4dd3-b70d-9f3d41f9993c/summary",
     "status": 200,
-    "durationMs": 502,
+    "durationMs": 488,
     "data": {
       "district_id": "f0d2d7fe-5e72-4dd3-b70d-9f3d41f9993c",
       "district_name": "Colombo",
@@ -346,11 +346,11 @@ This audit transcript serves as empirical supporting evidence for the **Sri Lank
     "section": "Hierarchy API (Tier 3)",
     "testName": "GET /districts/:id/substations returns 2 grid substations for 'Colombo'",
     "passed": true,
-    "timestamp": "2026-10-10T05:48:05.865Z",
+    "timestamp": "2026-10-10T05:49:32.954Z",
     "method": "GET",
     "endpoint": "/api/v1/districts/f0d2d7fe-5e72-4dd3-b70d-9f3d41f9993c/substations",
     "status": 200,
-    "durationMs": 502,
+    "durationMs": 485,
     "substations": [
       "Kolonnawa GSS",
       "Pannipitiya GSS"
@@ -360,11 +360,11 @@ This audit transcript serves as empirical supporting evidence for the **Sri Lank
     "section": "Hierarchy API (Tier 4)",
     "testName": "GET /substations/:id/installations returns 8 solar arrays for 'Kolonnawa GSS'",
     "passed": true,
-    "timestamp": "2026-10-10T05:48:06.350Z",
+    "timestamp": "2026-10-10T05:49:33.436Z",
     "method": "GET",
     "endpoint": "/api/v1/substations/62a5ba8b-51b0-4153-9083-2ba977d2d027/installations",
     "status": 200,
-    "durationMs": 485,
+    "durationMs": 482,
     "installations": [
       "Kolonnawa Solar Unit #002 (100.000 kW)",
       "Kolonnawa Solar Unit #030 (2500.000 kW)",
@@ -380,11 +380,11 @@ This audit transcript serves as empirical supporting evidence for the **Sri Lank
     "section": "Composite API",
     "testName": "GET /installations/:id/composite resolves full grid hierarchy and latest state",
     "passed": true,
-    "timestamp": "2026-10-10T05:48:07.190Z",
+    "timestamp": "2026-10-10T05:49:34.287Z",
     "method": "GET",
     "endpoint": "/api/v1/installations/b9090a65-d129-4e76-9775-fc9e8a362d98/composite",
     "status": 200,
-    "durationMs": 840,
+    "durationMs": 851,
     "topology": {
       "installation": "Kolonnawa Solar Unit #002"
     }
@@ -393,17 +393,17 @@ This audit transcript serves as empirical supporting evidence for the **Sri Lank
     "section": "Derived API",
     "testName": "GET /installations/:id/last-reading returns instantaneous telemetry snapshot",
     "passed": true,
-    "timestamp": "2026-10-10T05:48:07.856Z",
+    "timestamp": "2026-10-10T05:49:34.943Z",
     "method": "GET",
     "endpoint": "/api/v1/installations/b9090a65-d129-4e76-9775-fc9e8a362d98/last-reading",
     "status": 200,
-    "durationMs": 666,
+    "durationMs": 656,
     "snapshot": {
       "installation_id": "b9090a65-d129-4e76-9775-fc9e8a362d98",
       "meter_id": "SLSEA-MTR-0002",
       "last_reading": {
-        "id": "134409",
-        "timestamp": "2026-10-10T05:41:55.158Z",
+        "id": "134412",
+        "timestamp": "2026-10-10T05:48:08.332Z",
         "power_kw": 24.85,
         "energy_kwh": 1350.25,
         "voltage_v": 232.4
@@ -414,35 +414,35 @@ This audit transcript serves as empirical supporting evidence for the **Sri Lank
     "section": "IoT Security",
     "testName": "Issue hardware device write token with scope 'installation:write:b9090a65-d129-4e76-9775-fc9e8a362d98'",
     "passed": true,
-    "timestamp": "2026-10-10T05:48:08.332Z",
+    "timestamp": "2026-10-10T05:49:35.473Z",
     "method": "POST",
     "endpoint": "/api/v1/auth/device-token",
     "status": 200,
-    "durationMs": 476,
+    "durationMs": 530,
     "scope": "installation:write:b9090a65-d129-4e76-9775-fc9e8a362d98"
   },
   {
     "section": "IoT Ingestion",
     "testName": "Post 15-minute telemetry reading with device token (201 Created)",
     "passed": true,
-    "timestamp": "2026-10-10T05:48:09.002Z",
+    "timestamp": "2026-10-10T05:49:36.161Z",
     "method": "POST",
     "endpoint": "/api/v1/installations/b9090a65-d129-4e76-9775-fc9e8a362d98/readings",
     "status": 201,
-    "durationMs": 670,
+    "durationMs": 688,
     "insertedReading": {
       "message": "Telemetry reading successfully recorded.",
       "data": {
-        "id": "134412",
+        "id": "134415",
         "installation_id": "b9090a65-d129-4e76-9775-fc9e8a362d98",
-        "timestamp": "2026-10-10T05:48:08.332Z",
+        "timestamp": "2026-10-10T05:49:35.473Z",
         "power_kw": 24.85,
         "energy_kwh": 1350.25,
         "voltage_v": 232.4
       },
       "_links": {
         "self": {
-          "href": "/installations/b9090a65-d129-4e76-9775-fc9e8a362d98/readings/134412"
+          "href": "/installations/b9090a65-d129-4e76-9775-fc9e8a362d98/readings/134415"
         },
         "installation": {
           "href": "/installations/b9090a65-d129-4e76-9775-fc9e8a362d98"
@@ -457,11 +457,11 @@ This audit transcript serves as empirical supporting evidence for the **Sri Lank
     "section": "IoT Ingestion",
     "testName": "Ingest multi-reading batch payload (2 records)",
     "passed": true,
-    "timestamp": "2026-10-10T05:48:09.852Z",
+    "timestamp": "2026-10-10T05:49:37.014Z",
     "method": "POST",
     "endpoint": "/api/v1/installations/b9090a65-d129-4e76-9775-fc9e8a362d98/readings/batch",
     "status": 201,
-    "durationMs": 850,
+    "durationMs": 852,
     "result": {
       "message": "Batch telemetry readings processed successfully.",
       "data": {
@@ -470,8 +470,8 @@ This audit transcript serves as empirical supporting evidence for the **Sri Lank
         "total_received": 2,
         "inserted_count": 2,
         "duplicate_skipped_count": 0,
-        "first_timestamp": "2026-10-10T05:18:09.002Z",
-        "last_timestamp": "2026-10-10T05:33:09.002Z"
+        "first_timestamp": "2026-10-10T05:19:36.162Z",
+        "last_timestamp": "2026-10-10T05:34:36.162Z"
       },
       "_links": {
         "self": {
@@ -490,15 +490,15 @@ This audit transcript serves as empirical supporting evidence for the **Sri Lank
     "section": "IoT Telemetry",
     "testName": "Query historical 15-minute time series telemetry for site 'Kolonnawa Solar Unit #002'",
     "passed": true,
-    "timestamp": "2026-10-10T05:48:10.714Z",
+    "timestamp": "2026-10-10T05:49:37.850Z",
     "method": "GET",
     "endpoint": "/api/v1/installations/b9090a65-d129-4e76-9775-fc9e8a362d98/readings?limit=5",
     "status": 200,
-    "durationMs": 861,
+    "durationMs": 836,
     "sampleReading": {
-      "id": "134412",
+      "id": "134415",
       "installation_id": "b9090a65-d129-4e76-9775-fc9e8a362d98",
-      "timestamp": "2026-10-10T05:48:08.332Z",
+      "timestamp": "2026-10-10T05:49:35.473Z",
       "power_kw": 24.85,
       "energy_kwh": 1350.25,
       "voltage_v": 232.4
@@ -508,42 +508,42 @@ This audit transcript serves as empirical supporting evidence for the **Sri Lank
     "section": "Database Scale",
     "testName": "9 Administrative Provinces verified in Supabase (Count: 9)",
     "passed": true,
-    "timestamp": "2026-10-10T05:48:14.014Z",
+    "timestamp": "2026-10-10T05:49:41.144Z",
     "count": 9
   },
   {
     "section": "Database Scale",
     "testName": "25 Administrative Districts verified in Supabase (Count: 25)",
     "passed": true,
-    "timestamp": "2026-10-10T05:48:14.014Z",
+    "timestamp": "2026-10-10T05:49:41.144Z",
     "count": 25
   },
   {
     "section": "Database Scale",
     "testName": "Grid Substations >= 20 verified (Count: 28)",
     "passed": true,
-    "timestamp": "2026-10-10T05:48:14.014Z",
+    "timestamp": "2026-10-10T05:49:41.145Z",
     "count": 28
   },
   {
     "section": "Database Scale",
     "testName": "Solar Installations >= 200 verified (Count: 200)",
     "passed": true,
-    "timestamp": "2026-10-10T05:48:14.014Z",
+    "timestamp": "2026-10-10T05:49:41.145Z",
     "count": 200
   },
   {
     "section": "Database Scale",
-    "testName": "Telemetry records scale verified (Total: 134,409)",
+    "testName": "Telemetry records scale verified (Total: 134,412)",
     "passed": true,
-    "timestamp": "2026-10-10T05:48:14.032Z",
-    "count": 134409
+    "timestamp": "2026-10-10T05:49:41.164Z",
+    "count": 134412
   },
   {
     "section": "Diurnal Model",
     "testName": "Nighttime strict 0 kW rule validated (Night Max: 0 kW)",
     "passed": true,
-    "timestamp": "2026-10-10T05:48:14.032Z",
+    "timestamp": "2026-10-10T05:49:41.164Z",
     "peakAvgKw": "943.58",
     "nightMaxKw": 0
   }
@@ -564,8 +564,8 @@ Content-Type: application/json; charset=utf-8
   "status": "ready",
   "database": "connected",
   "dialect": "postgres",
-  "latency_ms": 3292,
-  "timestamp": "2026-10-10T05:48:01.200Z",
+  "latency_ms": 3291,
+  "timestamp": "2026-10-10T05:49:24.014Z",
   "service": "SLSEA Solar Generation Tracking API"
 }
 ```
@@ -690,16 +690,16 @@ Authorization: Bearer <JWT_DEVICE_TOKEN>
 {
   "message": "Telemetry reading successfully recorded.",
   "data": {
-    "id": "134412",
+    "id": "134415",
     "installation_id": "b9090a65-d129-4e76-9775-fc9e8a362d98",
-    "timestamp": "2026-10-10T05:48:08.332Z",
+    "timestamp": "2026-10-10T05:49:35.473Z",
     "power_kw": 24.85,
     "energy_kwh": 1350.25,
     "voltage_v": 232.4
   },
   "_links": {
     "self": {
-      "href": "/installations/b9090a65-d129-4e76-9775-fc9e8a362d98/readings/134412"
+      "href": "/installations/b9090a65-d129-4e76-9775-fc9e8a362d98/readings/134415"
     },
     "installation": {
       "href": "/installations/b9090a65-d129-4e76-9775-fc9e8a362d98"
